@@ -623,13 +623,15 @@ function DiseaseDetection() {
 }
 
 // Weather Component 
-function WeatherForecast() {
+function WeatherForecast({ onNavigateToRecommendations }) {
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
   const { t } = useLanguage();
   
   const getWeather = async (latitude, longitude) => {
     setLoading(true);
+    setCurrentLocation({ latitude, longitude });
     try {
       const response = await axios.post(`${API}/weather-forecast`, {
         latitude,
@@ -645,6 +647,17 @@ function WeatherForecast() {
       setLoading(false);
     }
   };
+
+  const handleGetCropRecommendations = () => {
+    if (weatherData && currentLocation) {
+      onNavigateToRecommendations({
+        weatherData,
+        location: currentLocation,
+        source: 'weather_analysis'
+      });
+      toast.success('Navigating to crop recommendations with weather data!');
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -653,9 +666,20 @@ function WeatherForecast() {
       {weatherData && (
         <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-sky-50">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-blue-800">
-              <Cloud className="w-5 h-5" />
-              <span>Weather Forecast</span>
+            <CardTitle className="flex items-center justify-between text-blue-800">
+              <div className="flex items-center space-x-2">
+                <Cloud className="w-5 h-5" />
+                <span>Weather Forecast</span>
+              </div>
+              <Button 
+                onClick={handleGetCropRecommendations}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                data-testid="weather-crop-recommendations-btn"
+              >
+                <Sprout className="w-4 h-4 mr-2" />
+                Crop Recommendations
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
             </CardTitle>
             <CardDescription>Current conditions and farming recommendations</CardDescription>
           </CardHeader>
@@ -694,9 +718,34 @@ function WeatherForecast() {
               </div>
             </div>
             
-            <div className="p-4 bg-white rounded-lg border border-blue-200">
-              <h4 className="font-semibold text-blue-800 mb-2">Current Condition</h4>
-              <p className="text-gray-700 capitalize">{weatherData.weather_condition}</p>
+            <div className="space-y-4">
+              <div className="p-4 bg-white rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-800 mb-2">Current Condition</h4>
+                <p className="text-gray-700 capitalize mb-3">{weatherData.weather_condition}</p>
+                
+                <div className="text-sm text-gray-600">
+                  <p className="mb-2">
+                    <strong>Farming Recommendations:</strong>
+                  </p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {weatherData.temperature > 30 ? (
+                      <li>Consider irrigation due to high temperature</li>
+                    ) : (
+                      <li>Temperature suitable for most crops</li>
+                    )}
+                    {weatherData.humidity > 70 ? (
+                      <li>High humidity - monitor for fungal diseases</li>
+                    ) : (
+                      <li>Good humidity levels for crop growth</li>
+                    )}
+                    {weatherData.rainfall > 200 ? (
+                      <li>Sufficient rainfall - reduce irrigation frequency</li>
+                    ) : (
+                      <li>Plan supplemental irrigation</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
