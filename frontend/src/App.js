@@ -338,21 +338,35 @@ function SoilAnalysis({ onNavigateToRecommendations }) {
 }
 
 // Crop Recommendations Component
-function CropRecommendations() {
+function CropRecommendations({ sharedData }) {
   const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
   
-  const getRecommendations = async (latitude, longitude) => {
+  // Auto-load recommendations if shared data is available
+  useEffect(() => {
+    if (sharedData && sharedData.location && sharedData.source) {
+      getRecommendations(sharedData.location.latitude, sharedData.location.longitude, sharedData);
+    }
+  }, [sharedData]);
+  
+  const getRecommendations = async (latitude, longitude, preloadedData = null) => {
     setLoading(true);
     try {
       const response = await axios.post(`${API}/crop-recommendations`, {
         latitude,
         longitude,
-        state: "Maharashtra"
+        state: "Maharashtra",
+        preloaded_soil_data: preloadedData?.soilData || null,
+        preloaded_weather_data: preloadedData?.weatherData || null
       });
       setRecommendations(response.data);
-      toast.success('Recommendations generated successfully!');
+      
+      if (preloadedData?.source) {
+        toast.success(`Recommendations generated using your ${preloadedData.source.replace('_', ' ')} data!`);
+      } else {
+        toast.success('Recommendations generated successfully!');
+      }
     } catch (error) {
       console.error('Recommendations error:', error);
       toast.error(t('error'));
@@ -363,38 +377,75 @@ function CropRecommendations() {
   
   return (
     <div className="space-y-6">
-      <LocationInput onLocationSubmit={getRecommendations} loading={loading} />
+      {!sharedData?.location && (
+        <LocationInput onLocationSubmit={getRecommendations} loading={loading} />
+      )}
+      
+      {sharedData?.location && (
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-indigo-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+                <span className="font-medium text-blue-800">
+                  Using data from {sharedData.source?.replace('_', ' ')} 
+                </span>
+              </div>
+              <Badge variant="outline" className="bg-blue-100 text-blue-700">
+                Smart Analysis
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {recommendations && (
         <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-emerald-50">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2 text-green-800">
               <Sprout className="w-5 h-5" />
-              <span>Crop Recommendations</span>
+              <span>Crop Recommendations & Yield Predictions</span>
             </CardTitle>
             <CardDescription>
-              AI-powered suggestions based on soil, weather, and market conditions
+              AI-powered suggestions with detailed yield and profit projections
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
               {recommendations.recommended_crops.map((crop, index) => (
-                <div key={index} className="p-4 bg-white rounded-lg shadow-sm border border-green-200">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-green-800">{crop.crop}</h3>
+                <div key={index} className="p-4 bg-white rounded-lg shadow-sm border border-green-200" data-testid={`crop-${crop.crop.toLowerCase()}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-semibold text-green-800 text-lg">{crop.crop}</h3>
                     <Badge variant="outline" className="bg-green-100 text-green-700">
-                      {crop.suitability}/10
+                      Suitability: {crop.suitability}/10
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Expected Yield:</span>
-                      <span className="ml-2 font-medium">{crop.expected_yield} quintals/ha</span>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <div className="text-xs text-green-600 font-medium">EXPECTED YIELD</div>
+                      <div className="text-2xl font-bold text-green-800">{crop.expected_yield}</div>
+                      <div className="text-xs text-green-600">quintals per hectare</div>
                     </div>
-                    <div>
-                      <span className="text-gray-600">Est. Profit:</span>
-                      <span className="ml-2 font-medium text-green-600">₹{crop.profit_per_hectare.toLocaleString()}</span>
+                    
+                    <div className="bg-emerald-50 p-3 rounded-lg">
+                      <div className="text-xs text-emerald-600 font-medium">PROFIT POTENTIAL</div>
+                      <div className="text-2xl font-bold text-emerald-800">₹{crop.profit_per_hectare.toLocaleString()}</div>
+                      <div className="text-xs text-emerald-600">per hectare</div>
                     </div>
+                    
+                    <div className="bg-teal-50 p-3 rounded-lg">
+                      <div className="text-xs text-teal-600 font-medium">MARKET TREND</div>
+                      <div className="text-lg font-bold text-teal-800">
+                        {crop.suitability >= 8.5 ? 'Excellent' : crop.suitability >= 7.5 ? 'Good' : 'Fair'}
+                      </div>
+                      <div className="text-xs text-teal-600">demand forecast</div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-gray-600">
+                    <strong>Production Estimate:</strong> For 1 hectare, you can expect approximately {crop.expected_yield} quintals, 
+                    generating an estimated profit of ₹{crop.profit_per_hectare.toLocaleString()} based on current market conditions.
                   </div>
                 </div>
               ))}
@@ -403,16 +454,23 @@ function CropRecommendations() {
             <Separator className="my-6" />
             
             <div className="space-y-4">
-              <h4 className="font-semibold text-green-800">AI Insights</h4>
+              <h4 className="font-semibold text-green-800">Production Planning Insights</h4>
               <div className="p-4 bg-white rounded-lg border border-green-200">
+                <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                  <strong>Soil Suitability:</strong> Based on your soil analysis (pH {recommendations.soil_analysis.ph_level}), 
+                  the top recommended crops show optimal compatibility with your soil conditions.
+                </p>
+                <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                  <strong>Yield Optimization:</strong> With proper irrigation and fertilization, you can achieve the projected yields. 
+                  Consider crop rotation to maintain soil fertility and maximize long-term productivity.
+                </p>
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  Based on current soil conditions (pH {recommendations.soil_analysis.ph_level}) and weather patterns, 
-                  cotton and soybean show highest profitability. The soil's nutrient profile is well-suited for these crops. 
-                  Consider crop rotation with legumes to maintain soil health.
+                  <strong>Market Strategy:</strong> Cotton and soybean show highest profit margins. Diversifying with 2-3 crops 
+                  can reduce risk while maintaining good returns.
                 </p>
               </div>
               
-              <div className="flex items-center space-x-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <span>Sustainability Score: {recommendations.sustainability_score}/10</span>
@@ -420,6 +478,10 @@ function CropRecommendations() {
                 <div className="flex items-center space-x-2">
                   <TrendingUp className="w-4 h-4" />
                   <span>Market Trend: Favorable</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Sprout className="w-4 h-4" />
+                  <span>Best Planting: Nov-Dec</span>
                 </div>
               </div>
             </div>
