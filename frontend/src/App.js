@@ -9,8 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Badge } from './components/ui/badge';
 import { Progress } from './components/ui/progress';
 import { Separator } from './components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
+import { ScrollArea } from './components/ui/scroll-area';
 import { toast, Toaster } from 'sonner';
-import { MapPin, Cloud, Sprout, TrendingUp, Camera, Leaf, Sun, Droplets, Wind, ThermometerSun } from 'lucide-react';
+import { MapPin, Cloud, Sprout, TrendingUp, Camera, Leaf, Sun, Droplets, Wind, ThermometerSun, MessageCircle, Send, Bot, ArrowRight } from 'lucide-react';
 import './App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
