@@ -665,6 +665,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
         </Routes>
+        <Toaster position="top-right" expand={true} richColors />
       </BrowserRouter>
     </LanguageProvider>
   );
