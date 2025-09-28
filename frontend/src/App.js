@@ -610,16 +610,158 @@ function WeatherForecast() {
   );
 }
 
+// Chatbot Component
+function FarmingChatbot() {
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      text: "नमस्ते! मैं आपका कृषि सहायक हूं। मैं फसल, मिट्टी, मौसम और कृषि तकनीकों के बारे में आपकी मदद कर सकता हूं।",
+      sender: 'bot',
+      timestamp: new Date()
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { t } = useLanguage();
+  
+  const sendMessage = async () => {
+    if (!inputMessage.trim()) return;
+    
+    const userMessage = {
+      id: messages.length + 1,
+      text: inputMessage,
+      sender: 'user',
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+    
+    try {
+      const response = await axios.post(`${API}/farming-chat`, {
+        message: inputMessage,
+        context: "Maharashtra farming assistant"
+      });
+      
+      const botMessage = {
+        id: messages.length + 2,
+        text: response.data.response,
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage = {
+        id: messages.length + 2,
+        text: "क्षमा करें, मुझे कुछ तकनीकी समस्या हो रही है। कृपया दोबारा कोशिश करें।",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button 
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-emerald-600 hover:bg-emerald-700 shadow-2xl z-50"
+          data-testid="chatbot-trigger"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md h-[500px] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <Bot className="w-5 h-5 text-emerald-600" />
+            <span>कृषि सहायक / Farming Assistant</span>
+          </DialogTitle>
+          <DialogDescription>
+            Ask me about crops, soil, weather, and farming techniques in Maharashtra
+          </DialogDescription>
+        </DialogHeader>
+        
+        <ScrollArea className="flex-1 p-4 border rounded-lg">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] p-3 rounded-lg ${
+                    message.sender === 'user'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  <p className="text-sm">{message.text}</p>
+                  <span className="text-xs opacity-70">
+                    {message.timestamp.toLocaleTimeString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 p-3 rounded-lg">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+        
+        <div className="flex space-x-2 pt-4">
+          <Input
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder="कृषि के बारे में पूछें... Ask about farming..."
+            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            disabled={isLoading}
+            data-testid="chat-input"
+          />
+          <Button 
+            onClick={sendMessage} 
+            disabled={isLoading || !inputMessage.trim()}
+            className="bg-emerald-600 hover:bg-emerald-700"
+            data-testid="send-message-btn"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Main Dashboard Component
 function Dashboard() {
   const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState("soil");
+  const [sharedData, setSharedData] = useState({});
+  
+  const navigateToRecommendations = (data) => {
+    setSharedData(data);
+    setActiveTab("crops");
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       <Header />
       
       <main className="max-w-6xl mx-auto p-6">
-        <Tabs defaultValue="soil" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-8 bg-white/60 backdrop-blur-sm">
             <TabsTrigger value="soil" className="flex items-center space-x-2">
               <Leaf className="w-4 h-4" />
@@ -640,11 +782,11 @@ function Dashboard() {
           </TabsList>
           
           <TabsContent value="soil">
-            <SoilAnalysis />
+            <SoilAnalysis onNavigateToRecommendations={navigateToRecommendations} />
           </TabsContent>
           
           <TabsContent value="crops">
-            <CropRecommendations />
+            <CropRecommendations sharedData={sharedData} />
           </TabsContent>
           
           <TabsContent value="disease">
@@ -652,10 +794,12 @@ function Dashboard() {
           </TabsContent>
           
           <TabsContent value="weather">
-            <WeatherForecast />
+            <WeatherForecast onNavigateToRecommendations={navigateToRecommendations} />
           </TabsContent>
         </Tabs>
       </main>
+      
+      <FarmingChatbot />
     </div>
   );
 }
