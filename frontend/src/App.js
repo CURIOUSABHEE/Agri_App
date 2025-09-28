@@ -212,13 +212,15 @@ function LocationInput({ onLocationSubmit, loading }) {
 }
 
 // Soil Analysis Component
-function SoilAnalysis() {
+function SoilAnalysis({ onNavigateToRecommendations }) {
   const [soilData, setSoilData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
   const { t } = useLanguage();
   
   const analyzeSoil = async (latitude, longitude) => {
     setLoading(true);
+    setCurrentLocation({ latitude, longitude });
     try {
       const response = await axios.post(`${API}/analyze-soil`, {
         latitude,
@@ -234,6 +236,17 @@ function SoilAnalysis() {
       setLoading(false);
     }
   };
+
+  const handleGetCropRecommendations = () => {
+    if (soilData && currentLocation) {
+      onNavigateToRecommendations({
+        soilData,
+        location: currentLocation,
+        source: 'soil_analysis'
+      });
+      toast.success('Navigating to crop recommendations with your soil data!');
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -242,13 +255,24 @@ function SoilAnalysis() {
       {soilData && (
         <Card className="shadow-lg border-0 bg-gradient-to-br from-amber-50 to-orange-50">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-amber-800">
-              <Leaf className="w-5 h-5" />
-              <span>Soil Analysis Results</span>
+            <CardTitle className="flex items-center justify-between text-amber-800">
+              <div className="flex items-center space-x-2">
+                <Leaf className="w-5 h-5" />
+                <span>Soil Analysis Results</span>
+              </div>
+              <Button 
+                onClick={handleGetCropRecommendations}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                data-testid="get-crop-recommendations-btn"
+              >
+                <Sprout className="w-4 h-4 mr-2" />
+                Get Crop Recommendations
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-amber-700">pH Level</Label>
                 <div className="flex items-center space-x-2">
@@ -296,6 +320,15 @@ function SoilAnalysis() {
                   <span className="text-sm font-medium">{soilData.organic_matter}%</span>
                 </div>
               </div>
+            </div>
+
+            <div className="p-4 bg-white rounded-lg border border-amber-200">
+              <h4 className="font-semibold text-amber-800 mb-2">Soil Health Summary</h4>
+              <p className="text-sm text-gray-700">
+                Your soil shows {soilData.ph_level > 7 ? 'alkaline' : soilData.ph_level < 6.5 ? 'acidic' : 'neutral'} pH levels. 
+                {soilData.moisture_content > 40 ? ' Good moisture retention.' : ' Consider irrigation planning.'} 
+                {soilData.nitrogen > 150 ? ' Adequate nitrogen levels.' : ' May need nitrogen supplementation.'}
+              </p>
             </div>
           </CardContent>
         </Card>
