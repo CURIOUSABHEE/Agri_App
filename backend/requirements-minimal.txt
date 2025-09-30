@@ -1,0 +1,27 @@
+# Core FastAPI dependencies
+fastapi
+uvicorn
+python-multipart
+python-dotenv
+
+# Data models and validation
+pydantic
+
+# Database dependencies
+motor  # MongoDB async driver
+pymongo
+dnspython  # For MongoDB Atlas
+
+# Authentication dependencies
+passlib
+python-jose
+bcrypt
+
+# Basic HTTP client
+httpx
+
+# Image processing (basic)
+Pillow
+
+# Translation (simple)
+deep-translator
