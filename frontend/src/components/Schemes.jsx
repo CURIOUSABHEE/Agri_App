@@ -9,6 +9,40 @@ const Schemes = ({ language = "en" }) => {
   const [selectedState, setSelectedState] = useState("");
   const [selectedSector, setSelectedSector] = useState("agriculture");
   const [totalSchemes, setTotalSchemes] = useState(0);
+  const [bookmarkedSchemes, setBookmarkedSchemes] = useState([]);
+
+  // Load bookmarked schemes from localStorage on component mount
+  useEffect(() => {
+    const saved = localStorage.getItem("bookmarkedSchemes");
+    if (saved) {
+      setBookmarkedSchemes(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save bookmarked schemes to localStorage
+  const saveBookmarksToStorage = (bookmarks) => {
+    localStorage.setItem("bookmarkedSchemes", JSON.stringify(bookmarks));
+  };
+
+  // Toggle bookmark for a scheme
+  const toggleBookmark = (scheme) => {
+    const isBookmarked = bookmarkedSchemes.some((b) => b.id === scheme.id);
+    let updatedBookmarks;
+
+    if (isBookmarked) {
+      updatedBookmarks = bookmarkedSchemes.filter((b) => b.id !== scheme.id);
+    } else {
+      updatedBookmarks = [...bookmarkedSchemes, scheme];
+    }
+
+    setBookmarkedSchemes(updatedBookmarks);
+    saveBookmarksToStorage(updatedBookmarks);
+  };
+
+  // Check if a scheme is bookmarked
+  const isSchemeBookmarked = (schemeId) => {
+    return bookmarkedSchemes.some((b) => b.id === schemeId);
+  };
 
   // Indian states list
   const indianStates = [
@@ -68,7 +102,7 @@ const Schemes = ({ language = "en" }) => {
 
   useEffect(() => {
     fetchSchemes();
-  }, []); 
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -96,11 +130,17 @@ const Schemes = ({ language = "en" }) => {
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">
-          {language === "ml" ? "കാർഷിക പദ്ധതികൾ 🌾" : "Agricultural Schemes 🌾"}
+          {language === "ml"
+            ? "കാർഷിക പദ്ധതികൾ 🌾"
+            : language === "hi"
+            ? "कृषि योजनाएं 🌾"
+            : "Agricultural Schemes 🌾"}
         </h1>
         <p className="text-gray-600">
           {language === "ml"
             ? "കർഷകർക്കും കാർഷിക പ്രവർത്തനങ്ങൾക്കുമുള്ള സർക്കാർ പദ്ധതികളും ആനുകൂല്യങ്ങളും കണ്ടെത്തുക"
+            : language === "hi"
+            ? "किसानों और कृषि गतिविधियों के लिए सरकारी योजनाएं और लाभ खोजें"
             : "Find government schemes and benefits for farmers and agricultural activities"}
         </p>
       </div>
@@ -192,14 +232,117 @@ const Schemes = ({ language = "en" }) => {
         </form>
       </Card>
 
+      {/* Bookmarked Schemes Section */}
+      {bookmarkedSchemes.length > 0 && (
+        <Card className="p-6 mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+              🔖{" "}
+              {language === "ml"
+                ? "ബുക്ക്മാർക്ക് ചെയ്ത പദ്ധതികൾ"
+                : language === "hi"
+                ? "बुकमार्क की गई योजनाएं"
+                : "Your Bookmarked Schemes"}
+            </h2>
+            <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+              {bookmarkedSchemes.length}{" "}
+              {bookmarkedSchemes.length === 1 ? "scheme" : "schemes"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {bookmarkedSchemes.map((scheme) => (
+              <div
+                key={scheme.id}
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold text-gray-800 text-sm leading-tight flex-1">
+                    {scheme.scheme_name}
+                  </h3>
+                  <button
+                    onClick={() => toggleBookmark(scheme)}
+                    className="text-yellow-600 hover:text-red-500 ml-2 flex-shrink-0 text-lg"
+                    title="Remove bookmark"
+                  >
+                    🔖
+                  </button>
+                </div>
+
+                <div className="flex items-center space-x-2 text-xs mb-2">
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    {scheme.level || "Government"}
+                  </span>
+                  {scheme.category && (
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                      {scheme.category}
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">
+                  {scheme.details && scheme.details.length > 120
+                    ? scheme.details.substring(0, 120) + "..."
+                    : scheme.details || "No details available"}
+                </p>
+
+                <div className="mt-3 pt-2 border-t border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <button className="text-xs text-green-600 hover:text-green-700 font-medium">
+                      View Details →
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      {language === "ml"
+                        ? "സംരക്ഷിച്ചത്"
+                        : language === "hi"
+                        ? "सहेजा गया"
+                        : "Saved"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              {language === "ml"
+                ? "ബുക്ക്മാർക്ക് നീക്കം ചെയ്യാൻ 🔖 ക്ലിക്ക് ചെയ്യുക"
+                : language === "hi"
+                ? "बुकमार्क हटाने के लिए 🔖 पर क्लिक करें"
+                : "Click 🔖 to remove bookmark"}
+            </p>
+          </div>
+        </Card>
+      )}
+
       {/* Results Summary */}
-      <div className="mb-4">
-        <p className="text-gray-600">
-          {loading
-            ? "Loading..."
-            : `Found ${totalSchemes} agricultural schemes`}
-          {selectedState && ` in ${selectedState}`}
-        </p>
+      <div className="mb-4 flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800 mb-1">
+            {language === "ml"
+              ? "എല്ലാ പദ്ധതികളും"
+              : language === "hi"
+              ? "सभी योजनाएं"
+              : "All Schemes"}
+          </h2>
+          <p className="text-gray-600 text-sm">
+            {loading
+              ? "Loading..."
+              : `Found ${totalSchemes} agricultural schemes`}
+            {selectedState && ` in ${selectedState}`}
+          </p>
+        </div>
+
+        {bookmarkedSchemes.length > 0 && (
+          <div className="text-xs text-gray-500">
+            {language === "ml"
+              ? "മുകളിൽ നിങ്ങളുടെ സേവ് ചെയ്ത പദ്ധതികൾ കാണുക"
+              : language === "hi"
+              ? "ऊपर अपनी सहेजी गई योजनाएं देखें"
+              : "See your saved schemes above"}
+          </div>
+        )}
       </div>
 
       {/* Schemes List */}
@@ -242,6 +385,23 @@ const Schemes = ({ language = "en" }) => {
                     )}
                   </div>
                 </div>
+
+                {/* Bookmark Button */}
+                <button
+                  onClick={() => toggleBookmark(scheme)}
+                  className={`ml-4 p-2 rounded-full transition-colors ${
+                    isSchemeBookmarked(scheme.id)
+                      ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                      : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                  }`}
+                  title={
+                    isSchemeBookmarked(scheme.id)
+                      ? "Remove bookmark"
+                      : "Add bookmark"
+                  }
+                >
+                  {isSchemeBookmarked(scheme.id) ? "🔖" : "📌"}
+                </button>
               </div>
 
               {/* Scheme Details */}
@@ -294,11 +454,16 @@ const Schemes = ({ language = "en" }) => {
                 )}
               </div>
 
-              {/* Action Button */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              {/* Action Buttons */}
+              <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
                 <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm transition-colors">
                   View Full Details
                 </button>
+                <span className="text-xs text-gray-500">
+                  {isSchemeBookmarked(scheme.id)
+                    ? "Bookmarked"
+                    : "Click 🔖 to bookmark"}
+                </span>
               </div>
             </Card>
           ))

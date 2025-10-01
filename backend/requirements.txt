@@ -40,6 +40,11 @@ redis==5.0.1  # Optional: For production caching
 # Optional AI integration
 google-generativeai==0.3.2
 
+# Machine Learning for crop disease detection
+protobuf==3.20.3
+tensorflow==2.13.0
+numpy==1.24.3
+
 # Image processing
 Pillow==10.1.0
 

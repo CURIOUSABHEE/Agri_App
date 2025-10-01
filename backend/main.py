@@ -1,12 +1,40 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import os
 import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+import numpy as np
+from PIL import Image
+import io  # <-- 1. IMPORTED IO MODULE
+import base64
+import google.generativeai as genai
+import json
+
+# Try to import TensorFlow (optional for chatbot functionality)
+try:
+    import tensorflow as tf
+    from tensorflow.keras.models import load_model
+    TENSORFLOW_AVAILABLE = True
+    print("✅ TensorFlow loaded successfully")
+except ImportError as e:
+    print(f"⚠️ TensorFlow not available: {e}")
+    print("🤖 Chatbot will work, but disease detection will be disabled")
+    TENSORFLOW_AVAILABLE = False
+    tf = None
 
 # Load environment variables
 load_dotenv()
+
+# Configure Gemini API
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyBl26CKJYJaa7riLnhfIxRKKs6oUp8HEa4")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    gemini_model = genai.GenerativeModel('gemini-pro')
+else:
+    gemini_model = None
+    print("⚠️ Gemini API key not found. Chatbot will use mock responses.")
 
 # Simple farmer data - no database needed
 FARMER_DATA = {
@@ -15,6 +43,34 @@ FARMER_DATA = {
     "farm_count": 3,
     "total_area": "25 acres"
 }
+
+# Weather API configuration
+WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+WEATHER_BASE_URL = "http://api.openweathermap.org/data/2.5"
+
+# Kerala districts for location-based weather (using API-friendly names)
+KERALA_DISTRICTS = [
+    "Trivandrum", "Kollam", "Pathanamthitta", "Alappuzha", "Kottayam",
+    "Idukki", "Kochi", "Thrissur", "Palakkad", "Malappuram", 
+    "Kozhikode", "Wayanad", "Kannur", "Kasaragod"
+]
+
+# District name mapping for API compatibility
+DISTRICT_NAME_MAPPING = {
+    "thiruvananthapuram": "Trivandrum",
+    "ernakulam": "Kochi",
+    "calicut": "Kozhikode",
+    "trichur": "Thrissur"
+}
+
+# Pydantic models for API requests
+class ChatMessage(BaseModel):
+    message: str
+    language: str = "en"
+
+class ChatResponse(BaseModel):
+    response: str
+    timestamp: str
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -31,6 +87,479 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Load crop disease detection model
+MODEL_PATH = "Model.hdf5"
+disease_model = None
+disease_classes = [
+    "Apple___Apple_scab",
+    "Apple___Black_rot", 
+    "Apple___Cedar_apple_rust",
+    "Apple___healthy",
+    "Blueberry___healthy",
+    "Cherry_(including_sour)___Powdery_mildew",
+    "Cherry_(including_sour)___healthy",
+    "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+    "Corn_(maize)___Common_rust_",
+    "Corn_(maize)___Northern_Leaf_Blight",
+    "Corn_(maize)___healthy",
+    "Grape___Black_rot",
+    "Grape___Esca_(Black_Measles)",
+    "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)",
+    "Grape___healthy",
+    "Orange___Haunglongbing_(Citrus_greening)",
+    "Peach___Bacterial_spot",
+    "Peach___healthy",
+    "Pepper,_bell___Bacterial_spot",
+    "Pepper,_bell___healthy",
+    "Potato___Early_blight",
+    "Potato___Late_blight",
+    "Potato___healthy",
+    "Raspberry___healthy",
+    "Soybean___healthy",
+    "Squash___Powdery_mildew",
+    "Strawberry___Leaf_scorch",
+    "Strawberry___healthy",
+    "Tomato___Bacterial_spot",
+    "Tomato___Early_blight",
+    "Tomato___Late_blight",
+    "Tomato___Leaf_Mold",
+    "Tomato___Septoria_leaf_spot",
+    "Tomato___Spider_mites Two-spotted_spider_mite",
+    "Tomato___Target_Spot",
+    "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+    "Tomato___Tomato_mosaic_virus",
+    "Tomato___healthy"
+]
+
+def load_disease_model():
+    """Load the trained disease detection model"""
+    print("--- ATTEMPTING TO LOAD MODEL (Simplified) ---")
+    global disease_model
+    
+    if not TENSORFLOW_AVAILABLE:
+        print("⚠️ TensorFlow not available. Disease detection disabled.")
+        disease_model = None
+        return
+        
+    try:
+        model_path = "Model.hdf5"
+        if os.path.exists(model_path):
+            # Directly load the model and compile it.
+            # This is a more robust way to handle potential version issues.
+            disease_model = tf.keras.models.load_model(model_path, compile=True)
+
+            print(f"✅ Disease detection model loaded successfully from {model_path}")
+            disease_model.summary()
+        else:
+            print(f"❌ Model file not found at {model_path}")
+            disease_model = None
+    except Exception as e:
+        print(f"❌ Error loading model: {str(e)}")
+        disease_model = None
+
+# Initialize model on startup (only if TensorFlow is available)
+if TENSORFLOW_AVAILABLE:
+    load_disease_model()
+else:
+    print("⚠️ Skipping disease model loading - TensorFlow not available")
+
+
+def preprocess_image(image_file):
+    """Preprocess the uploaded image for model prediction"""
+    try:
+        # Open and convert image
+        image = Image.open(image_file)
+        
+        # Convert to RGB if necessary
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Resize to model's expected input size (224x224 for most models)
+        image = image.resize((224, 224))
+        
+        # Convert to numpy array and normalize
+        img_array = np.array(image, dtype=np.float32)
+        img_array = img_array / 255.0
+        
+        # Add batch dimension - should be (1, 224, 224, 3)
+        img_array = np.expand_dims(img_array, axis=0)
+        
+        print(f"✅ Image preprocessed successfully. Shape: {img_array.shape}")
+        return img_array
+        
+    except Exception as e:
+        print(f"❌ Error preprocessing image: {str(e)}")
+        return None
+
+def predict_disease(image_array):
+    """Predict crop disease using the loaded model"""
+    global disease_model, disease_classes
+    
+    if disease_model is None:
+        return None
+    
+    try:
+        print(f"Input array shape for prediction: {image_array.shape}")
+        print(f"Input array dtype: {image_array.dtype}")
+        
+        # Make prediction
+        predictions = disease_model.predict(image_array, verbose=0)
+        
+        print(f"Prediction output shape: {predictions.shape}")
+        
+        # Get top prediction
+        predicted_class_index = np.argmax(predictions[0])
+        confidence = float(predictions[0][predicted_class_index])
+        
+        # Ensure we have enough classes
+        if predicted_class_index >= len(disease_classes):
+            print(f"Warning: Predicted index {predicted_class_index} exceeds available classes ({len(disease_classes)})")
+            predicted_disease = f"Unknown_Disease_{predicted_class_index}"
+        else:
+            predicted_disease = disease_classes[predicted_class_index]
+        
+        return {
+            "disease": predicted_disease,
+            "confidence": confidence * 100,  # Convert to percentage
+            "raw_predictions": predictions[0].tolist()
+        }
+    except Exception as e:
+        print(f"Error making prediction: {e}")
+        print(f"Image array shape: {image_array.shape if image_array is not None else 'None'}")
+        return None
+
+def format_disease_name(disease_name):
+    """Format disease name for better readability"""
+    # Replace underscores with spaces
+    formatted = disease_name.replace("_", " ").replace("(", " (").replace(")", ") ")
+    
+    # Handle special formatting
+    formatted = formatted.replace("  ", " ").strip()
+    
+    return formatted
+
+def get_disease_info(disease_name, language="en"):
+    """Get disease information including treatment and prevention"""
+    
+    # Extract crop and disease from the prediction
+    if "___" in disease_name:
+        crop, disease = disease_name.split("___", 1)
+    else:
+        crop, disease = "Unknown", disease_name
+    
+    # Format names
+    crop = format_disease_name(crop)
+    disease = format_disease_name(disease)
+    
+    # Determine severity
+    severity = "none" if "healthy" in disease.lower() else "moderate"
+    if any(keyword in disease.lower() for keyword in ["blight", "rot", "virus"]):
+        severity = "severe"
+    elif any(keyword in disease.lower() for keyword in ["spot", "mildew"]):
+        severity = "moderate"
+    
+    # Generate treatment and prevention based on disease type
+    if "healthy" in disease.lower():
+        treatment = {
+            "en": "Continue current care routine. No treatment needed.",
+            "hi": "वर्तमान देखभाल जारी रखें। कोई उपचार की आवश्यकता नहीं।",
+            "ml": "നിലവിലെ പരിചരണം തുടരുക. ചികിത്സ ആവശ്യമില്ല."
+        }
+        prevention = {
+            "en": "Regular fertilization, proper watering, and good plant spacing.",
+            "hi": "नियमित उर्वरक, उचित सिंचाई, और उचित पौधे की दूरी।",
+            "ml": "നിയമിത വളം, ശരിയായ നീരൊഴിക്കൽ, ഉചിതമായ ചെടികളുടെ അകലം."
+        }
+    elif "blight" in disease.lower():
+        treatment = {
+            "en": "Apply copper-based fungicide. Remove infected parts. Improve air circulation.",
+            "hi": "कॉपर-आधारित फंगीसाइड लगाएं। संक्रमित भागों को हटाएं। हवा की आवाजाही में सुधार करें।",
+            "ml": "കോപ്പർ അധിഷ്ഠിത ഫംഗിസൈഡ് പ്രയോഗിക്കുക. രോഗബാധിത ഭാഗങ്ങൾ നീക്കം ചെയ്യുക. വായുസഞ്ചാരം മെച്ചപ്പെടുത്തുക."
+        }
+        prevention = {
+            "en": "Avoid overhead watering, provide good drainage, rotate crops annually.",
+            "hi": "ऊपर से पानी देने से बचें, अच्छी जल निकासी प्रदान करें, वार्षिक फसल चक्रण करें।",
+            "ml": "മുകളിൽ നിന്ന് വെള്ളം ഒഴിക്കുന്നത് ഒഴിവാക്കുക, നല്ല നീർവഴി, വാർഷിക വിള ഭ്രമണം."
+        }
+    elif "spot" in disease.lower():
+        treatment = {
+            "en": "Apply preventive fungicide spray every 7-14 days. Remove affected leaves.",
+            "hi": "हर 7-14 दिन में निवारक फंगीसाइड स्प्रे करें। प्रभावित पत्तियों को हटाएं।",
+            "ml": "7-14 ദിവസത്തിലൊരിക്കൽ പ്രതിരോധ ഫംഗിസൈഡ് സ്പ്രേ ചെയ്യുക. രോഗബാധിത ഇലകൾ നീക്കം ചെയ്യുക."
+        }
+        prevention = {
+            "en": "Ensure proper plant spacing for air circulation. Avoid leaf wetness.",
+            "hi": "हवा की आवाजाही के लिए उचित पौधे की दूरी सुनिश्चित करें। पत्ती की नमी से बचें।",
+            "ml": "വായുസഞ്ചാരത്തിനായി ഉചിതമായ ചെടികളുടെ അകലം ഉറപ്പാക്കുക. ഇലകളിലെ ഈർപ്പം ഒഴിവാക്കുക."
+        }
+    else:
+        treatment = {
+            "en": "Consult agricultural expert for specific treatment. Apply appropriate fungicide or bactericide.",
+            "hi": "विशिष्ट उपचार के लिए कृषि विशेषज्ञ से परामर्श करें। उपयुक्त फंगीसाइड या बैक्टीरिसाइड लगाएं।",
+            "ml": "നിർദ്ദിഷ്ട ചികിത്സയ്ക്കായി കാർഷിക വിദഗ്ധനെ സമീപിക്കുക. ഉചിതമായ ഫംഗിസൈഡ് അല്ലെങ്കിൽ ബാക്ടീരിസൈഡ് പ്രയോഗിക്കുക."
+        }
+        prevention = {
+            "en": "Maintain plant health through proper nutrition and watering. Regular monitoring.",
+            "hi": "उचित पोषण और पानी के माध्यम से पौधे का स्वास्थ्य बनाए रखें। नियमित निगरानी।",
+            "ml": "ശരിയായ പോഷണവും നീരൊഴിക്കലും വഴി ചെടിയുടെ ആരോഗ്യം നിലനിർത്തുക. നിയമിത നിരീക്ഷണം."
+        }
+    
+    return {
+        "crop": crop,
+        "disease": disease,
+        "severity": severity,
+        "treatment": treatment.get(language, treatment["en"]),
+        "prevention": prevention.get(language, prevention["en"])
+    }
+
+# Helper functions for chatbot data integration
+async def get_weather_data(location="Kochi, Kerala"):
+    """Fetch current weather data for the location using OpenWeather API"""
+    try:
+        # Try to get real weather data if API key is available
+        if WEATHER_API_KEY and WEATHER_API_KEY.strip():
+            try:
+                url = f"{WEATHER_BASE_URL}/weather?q={location}&appid={WEATHER_API_KEY}&units=metric"
+                response = requests.get(url, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Generate farming advice based on real weather conditions
+                    farming_advice = get_farming_advice_from_weather(data)
+                    
+                    return {
+                        "location": f"{data['name']}, {data['sys']['country']}",
+                        "temperature": f"{round(data['main']['temp'])}°C",
+                        "feels_like": f"{round(data['main']['feels_like'])}°C", 
+                        "humidity": f"{data['main']['humidity']}%",
+                        "conditions": data['weather'][0]['description'].title(),
+                        "wind_speed": f"{round(data['wind']['speed'] * 3.6)} km/h",
+                        "pressure": f"{data['main']['pressure']} hPa",
+                        "visibility": f"{data.get('visibility', 0)/1000:.1f} km",
+                        "uv_index": "Moderate",  # OpenWeather free tier doesn't include UV
+                        "farming_advice": farming_advice,
+                        "api_source": "OpenWeatherMap"
+                    }
+                else:
+                    print(f"Weather API error: {response.status_code} - {response.text}")
+            except requests.RequestException as e:
+                print(f"Weather API request failed: {e}")
+        
+        # Fallback to mock data if API is not available or fails
+        print("Using mock weather data as fallback")
+        import random
+        temperatures = [26, 27, 28, 29, 30, 31]
+        conditions = [
+            "Partly cloudy with high humidity",
+            "Cloudy with chance of rain", 
+            "Sunny and humid",
+            "Light rain expected",
+            "Overcast with high moisture"
+        ]
+        
+        temp = random.choice(temperatures)
+        condition = random.choice(conditions)
+        
+        # Generate farming advice based on conditions
+        advice = ""
+        if "rain" in condition.lower():
+            advice = "Good time for transplanting rice. Avoid fertilizer application during rain."
+        elif "sunny" in condition.lower():
+            advice = "Perfect for drying harvested crops. Water plants early morning or evening."
+        elif "humid" in condition.lower():
+            advice = "Watch for fungal diseases. Ensure good air circulation around plants."
+        else:
+            advice = "Monitor soil moisture and water as needed. Check plant health regularly."
+            
+        return {
+            "location": location,
+            "temperature": f"{temp}°C",
+            "feels_like": f"{temp + random.randint(-2, 3)}°C",
+            "humidity": f"{random.randint(75, 90)}%",
+            "conditions": condition,
+            "wind_speed": f"{random.randint(8, 18)} km/h",
+            "pressure": f"{random.randint(1005, 1020)} hPa",
+            "visibility": f"{random.randint(8, 15)} km",
+            "uv_index": "High" if "sunny" in condition.lower() else "Moderate",
+            "farming_advice": advice,
+            "api_source": "Mock Data"
+        }
+    except Exception as e:
+        print(f"Error fetching weather: {e}")
+        return None
+
+def get_farming_advice_from_weather(weather_data):
+    """Generate farming advice based on weather conditions"""
+    try:
+        temp = weather_data['main']['temp']
+        humidity = weather_data['main']['humidity']
+        conditions = weather_data['weather'][0]['main'].lower()
+        
+        advice = []
+        
+        # Temperature-based advice
+        if temp > 32:
+            advice.append("Very hot day - water crops early morning and evening.")
+        elif temp < 20:
+            advice.append("Cool weather - good for transplanting and land preparation.")
+        else:
+            advice.append("Good temperature for most farming activities.")
+        
+        # Humidity-based advice
+        if humidity > 80:
+            advice.append("High humidity - watch for fungal diseases, ensure good ventilation.")
+        elif humidity < 50:
+            advice.append("Low humidity - increase watering frequency.")
+        
+        # Weather condition-based advice
+        if "rain" in conditions:
+            advice.append("Rainy conditions - avoid pesticide spraying, good for rice cultivation.")
+        elif "clear" in conditions or "sun" in conditions:
+            advice.append("Clear skies - perfect for drying harvested crops and field work.")
+        elif "cloud" in conditions:
+            advice.append("Cloudy weather - good for transplanting as plants won't get stressed.")
+        
+        return " ".join(advice)
+        
+    except Exception as e:
+        print(f"Error generating farming advice: {e}")
+        return "Monitor weather conditions and adjust farming activities accordingly."
+
+async def get_schemes_data():
+    """Get current government schemes for farmers"""
+    try:
+        # Get schemes from existing endpoint data
+        schemes_data = [
+            {
+                "name": "PM-KISAN",
+                "description": "Direct income support to farmers - ₹6000 per year",
+                "eligibility": "Small and marginal farmers with cultivable land",
+                "status": "Active"
+            },
+            {
+                "name": "Kerala Karshaka Welfare Scheme", 
+                "description": "State scheme for farmer welfare and insurance",
+                "eligibility": "All registered farmers in Kerala",
+                "status": "Active"
+            },
+            {
+                "name": "Crop Insurance Scheme",
+                "description": "Protection against crop loss due to natural disasters",
+                "eligibility": "All farmers with insurable crops",
+                "status": "Active"
+            }
+        ]
+        return schemes_data
+    except Exception as e:
+        print(f"Error fetching schemes: {e}")
+        return []
+
+async def get_market_prices_data():
+    """Get current market prices for common crops"""
+    try:
+        # Return mock market data - can be replaced with real API
+        return {
+            "rice": "₹25-30 per kg",
+            "coconut": "₹15-20 per piece", 
+            "pepper": "₹400-450 per kg",
+            "cardamom": "₹1200-1400 per kg",
+            "rubber": "₹180-200 per kg",
+            "banana": "₹20-25 per dozen",
+            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M")
+        }
+    except Exception as e:
+        print(f"Error fetching market prices: {e}")
+        return {}
+
+async def get_dashboard_data():
+    """Get farmer's dashboard information"""
+    try:
+        return {
+            "total_farms": 3,
+            "total_area": "25 acres",
+            "active_crops": ["Rice", "Coconut", "Pepper"],
+            "recent_activities": [
+                "Watering - 2 hours ago",
+                "Pesticide application - 1 day ago", 
+                "Harvesting - 3 days ago"
+            ],
+            "alerts": [
+                "Weather forecast shows rain in 2 days",
+                "Market price for pepper increased by 5%"
+            ]
+        }
+    except Exception as e:
+        print(f"Error fetching dashboard data: {e}")
+        return {}
+
+def create_enhanced_system_prompt(weather_data, schemes_data, market_data, dashboard_data):
+    """Create system prompt with real-time data for Krishi Saathi"""
+    
+    weather_info = ""
+    if weather_data:
+        weather_info = f"""
+Current Weather Information:
+- Location: {weather_data.get('location')}
+- Temperature: {weather_data.get('temperature')}
+- Humidity: {weather_data.get('humidity')}
+- Rainfall: {weather_data.get('rainfall')}
+- Conditions: {weather_data.get('conditions')}
+- Farming Advice: {weather_data.get('farming_advice')}
+"""
+
+    schemes_info = ""
+    if schemes_data:
+        schemes_list = "\n".join([f"- {scheme['name']}: {scheme['description']}" for scheme in schemes_data])
+        schemes_info = f"""
+Available Government Schemes:
+{schemes_list}
+"""
+
+    market_info = ""
+    if market_data:
+        market_list = "\n".join([f"- {crop}: {price}" for crop, price in market_data.items() if crop != "last_updated"])
+        market_info = f"""
+Current Market Prices:
+{market_list}
+Last Updated: {market_data.get('last_updated', 'N/A')}
+"""
+
+    dashboard_info = ""
+    if dashboard_data:
+        dashboard_info = f"""
+Farmer's Current Status:
+- Total Farms: {dashboard_data.get('total_farms', 'N/A')}
+- Total Area: {dashboard_data.get('total_area', 'N/A')} 
+- Active Crops: {', '.join(dashboard_data.get('active_crops', []))}
+- Recent Activities: {', '.join(dashboard_data.get('recent_activities', []))}
+"""
+
+    return f"""You are "Krishi Saathi", a farmer-friendly assistant for people in Kerala. You talk in a simple, clear, and respectful way so that even an illiterate farmer or a villager can easily understand you.
+
+Your role is to:
+• Give easy-to-follow guidance about farming, crops, weather, and cultivation methods specific to Kerala.
+• Use local context: Kerala's soil types, climate, water availability, and common farming practices.
+• Suggest best crops for each season and also mention high-yield crops that grow well in Kerala.
+• Share practical tips for farmers (like how to save water, protect crops, or store harvest).
+• Always keep answers short, simple, and direct. Avoid technical jargon. If you must use a technical term, explain it in a farmer-friendly way.
+• Be kind, patient, and supportive, like a trusted village advisor.
+• If the farmer asks something outside farming (like health, politics, or unrelated topics), politely guide them back to farming or say you don't know.
+
+CURRENT REAL-TIME INFORMATION TO USE IN YOUR RESPONSES:
+{weather_info}
+{schemes_info}
+{market_info}
+{dashboard_info}
+
+Use this real-time information to give more accurate and helpful advice. For example:
+- If asked about weather, use the current weather data
+- If asked about schemes, mention the available government programs
+- If asked about selling crops, reference current market prices
+- Consider the farmer's current crops and activities when giving advice
+
+Tone: Warm, respectful, and caring. Talk like you are speaking to a farmer in person."""
 
 # Simple dashboard endpoint
 @app.get("/api/dashboard")
@@ -799,13 +1328,360 @@ async def get_inventory_transactions(itemId: int = None, limit: int = 10):
         "data": transactions
     }
 
+# Crop Disease Detection endpoint
+@app.post("/api/disease/detect")
+async def detect_crop_disease(
+    file: UploadFile = File(...),
+    language: str = "en"
+):
+    """Detect crop disease from uploaded image"""
+    
+    # Check if TensorFlow and model are available
+    if not TENSORFLOW_AVAILABLE or disease_model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Disease detection service is currently unavailable. TensorFlow dependencies not installed."
+        )
+    
+    # Validate file type
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid file type. Please upload an image file."
+        )
+    
+    # Check file size (max 10MB)
+    max_size = 10 * 1024 * 1024  # 10MB
+    file_size = 0
+    content = await file.read()
+    file_size = len(content)
+    
+    if file_size > max_size:
+        raise HTTPException(
+            status_code=400, 
+            detail="File too large. Maximum size is 10MB."
+        )
+    
+    try:
+        # Preprocess image
+        # <-- 2. WRAPPED 'content' IN io.BytesIO()
+        image_array = preprocess_image(io.BytesIO(content))
+        if image_array is None:
+            raise HTTPException(
+                status_code=400, 
+                detail="Failed to process image. Please try with a different image."
+            )
+        
+        # Check if model is loaded
+        if disease_model is None:
+            # Return mock data if model is not available
+            return {
+                "success": True,
+                "data": {
+                    "disease": "Leaf Spot Disease" if language == "en" else 
+                             "पत्ती धब्बा रोग" if language == "hi" else "ഇല പുള്ളി രോഗം",
+                    "confidence": 92.5,
+                    "severity": "moderate",
+                    "treatment": "Apply copper-based fungicide spray. Repeat in 7-10 days." if language == "en" else
+                               "कॉपर आधारित फंगीसाइड स्प्रे करें। 7-10 दिनों में दोहराएं।" if language == "hi" else
+                               "കോപ്പർ അധിഷ്ഠിത ഫംഗിസൈഡ് സ്പ്രേ ചെയ്യുക. 7-10 ദിവസത്തിൽ ആവർത്തിക്കുക.",
+                    "prevention": "Maintain proper plant spacing, avoid overwatering" if language == "en" else
+                                "उचित पौधे की दूरी बनाए रखें, अत्यधिक पानी से बचें" if language == "hi" else
+                                "ചെടികൾക്കിടയിൽ ഉചിതമായ അകലം, അമിതമായ നീരൊഴിക്കൽ ഒഴിവാക്കുക",
+                    "crop": "Unknown",
+                    "model_available": False
+                },
+                "message": "Using fallback prediction - AI model not loaded"
+            }
+        
+        # Make prediction using the model
+        prediction_result = predict_disease(image_array)
+        if prediction_result is None:
+            raise HTTPException(
+                status_code=500, 
+                detail="Failed to analyze image. Please try again."
+            )
+        
+        # Get disease information
+        disease_info = get_disease_info(prediction_result["disease"], language)
+        
+        # Combine results
+        result = {
+            "disease": disease_info["disease"],
+            "crop": disease_info["crop"],
+            "confidence": round(prediction_result["confidence"], 1),
+            "severity": disease_info["severity"],
+            "treatment": disease_info["treatment"],
+            "prevention": disease_info["prevention"],
+            "model_available": True,
+            "raw_disease_code": prediction_result["disease"]
+        }
+        
+        return {
+            "success": True,
+            "data": result,
+            "message": "Disease detection completed successfully"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in disease detection: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error during disease detection"
+        )
+
+# Krishi Saathi System Prompt
+KRISHI_SAATHI_PROMPT = """You are "Krishi Saathi", a farmer-friendly assistant for people in Kerala. You talk in a simple, clear, and respectful way so that even an illiterate farmer or a villager can easily understand you.
+
+Your role is to:
+• Give easy-to-follow guidance about farming, crops, weather, and cultivation methods specific to Kerala.
+• Use local context: Kerala's soil types, climate, water availability, and common farming practices.
+• Suggest best crops for each season and also mention high-yield crops that grow well in Kerala.
+• Share practical tips for farmers (like how to save water, protect crops, or store harvest).
+• Always keep answers short, simple, and direct. Avoid technical jargon. If you must use a technical term, explain it in a farmer-friendly way.
+• Be kind, patient, and supportive, like a trusted village advisor.
+• If the farmer asks something outside farming (like health, politics, or unrelated topics), politely guide them back to farming or say you don't know.
+
+Tone: Warm, respectful, and caring. Talk like you are speaking to a farmer in person.
+
+Current context: You are helping farmers in Kerala, India. Focus on Kerala's tropical climate, monsoon seasons, and popular crops like rice, coconut, spices, rubber, and vegetables."""
+
+def detect_location_from_message(message: str) -> str:
+    """Detect Kerala district/location from user message"""
+    message_lower = message.lower()
+    
+    # Check district name mapping first
+    for original, api_friendly in DISTRICT_NAME_MAPPING.items():
+        if original in message_lower:
+            return f"{api_friendly}, Kerala, India"
+    
+    # Check for Kerala districts mentioned in the message
+    for district in KERALA_DISTRICTS:
+        if district.lower() in message_lower:
+            return f"{district}, Kerala, India"
+    
+    # Check for common city variations
+    location_mapping = {
+        "kochi": "Kochi, Kerala, India",
+        "cochin": "Kochi, Kerala, India", 
+        "trivandrum": "Trivandrum, Kerala, India",
+        "tvm": "Trivandrum, Kerala, India",
+        "calicut": "Kozhikode, Kerala, India",
+        "trichur": "Thrissur, Kerala, India",
+        "thiruvananthapuram": "Trivandrum, Kerala, India"
+    }
+    
+    for variation, standard_name in location_mapping.items():
+        if variation in message_lower:
+            return standard_name
+    
+    # Default location
+    return "Kochi, Kerala, India"
+
+async def get_enhanced_krishi_saathi_response(message: str, language: str = "en", 
+                                          weather_data=None, schemes_data=None, 
+                                          market_data=None, dashboard_data=None) -> str:
+    """Get enhanced response from Krishi Saathi using Gemini API with real-time data"""
+    try:
+        if gemini_model is None:
+            return get_mock_farmer_response(message, language)
+        
+        # Detect location from message and get location-specific weather if needed
+        detected_location = detect_location_from_message(message)
+        if weather_data is None or any(word in message.lower() for word in ["weather", "rain", "temperature", "मौसम", "बारिश", "കാലാവസ്ഥ", "മഴ"]):
+            weather_data = await get_weather_data(detected_location)
+        
+        # Create enhanced system prompt with real-time data
+        enhanced_prompt = create_enhanced_system_prompt(
+            weather_data, schemes_data, market_data, dashboard_data
+        )
+        
+        # Prepare the language context
+        language_instruction = ""
+        if language == "hi":
+            language_instruction = "\nPlease respond in simple Hindi (हिंदी)."
+        elif language == "ml":
+            language_instruction = "\nPlease respond in simple Malayalam (മലയാളം)."
+        else:
+            language_instruction = "\nPlease respond in simple English."
+        
+        full_prompt = enhanced_prompt + language_instruction + f"\n\nFarmer's question: {message}"
+        
+        # Generate response using Gemini
+        response = gemini_model.generate_content(full_prompt)
+        return response.text
+        
+    except Exception as e:
+        print(f"Error getting enhanced Gemini response: {e}")
+        return get_mock_farmer_response(message, language)
+
+def get_krishi_saathi_response(message: str, language: str = "en") -> str:
+    """Get response from Krishi Saathi using Gemini API (legacy function)"""
+    try:
+        if gemini_model is None:
+            return get_mock_farmer_response(message, language)
+        
+        # Prepare the prompt with language context
+        language_instruction = ""
+        if language == "hi":
+            language_instruction = "\nPlease respond in simple Hindi (हिंदी)."
+        elif language == "ml":
+            language_instruction = "\nPlease respond in simple Malayalam (മലയാളം)."
+        else:
+            language_instruction = "\nPlease respond in simple English."
+        
+        full_prompt = KRISHI_SAATHI_PROMPT + language_instruction + f"\n\nFarmer's question: {message}"
+        
+        # Generate response using Gemini
+        response = gemini_model.generate_content(full_prompt)
+        return response.text
+        
+    except Exception as e:
+        print(f"Error getting Gemini response: {e}")
+        return get_mock_farmer_response(message, language)
+
+def get_mock_farmer_response(message: str, language: str = "en") -> str:
+    """Fallback mock responses when Gemini API is not available"""
+    message_lower = message.lower()
+    
+    if language == "hi":
+        if any(word in message_lower for word in ["फसल", "खेती", "कृषि"]):
+            return "केरल में धान, नारियल, मसाले और सब्जियों की खेती अच्छी होती है। मानसून के समय धान बोना सबसे अच्छा होता है। आपको कौन सी फसल के बारे में जानना है?"
+        elif any(word in message_lower for word in ["बारिश", "मौसम", "पानी"]):
+            return "केरल में मानसून जून से सितंबर तक होता है। इस समय धान की रोपाई करना अच्छा है। बारिश के बाद नारियल और मसालों की देखभाल करें।"
+        elif any(word in message_lower for word in ["रोग", "बीमारी", "कीट"]):
+            return "पौधों की बीमारियों से बचने के लिए नीम का तेल छिड़कें। अगर आपको पत्तों पर धब्बे दिखें तो तुरंत उन्हें हटा दें। हमारे रोग पहचान टूल का इस्तेमाल करें।"
+        else:
+            return "मैं कृषि सहायक हूँ और केरल के किसानों की मदद करता हूँ। आप मुझसे खेती, फसल, मौसम के बारे में पूछ सकते हैं।"
+    
+    elif language == "ml":
+        if any(word in message_lower for word in ["വിള", "കൃഷി", "കൃഷിക്കാര"]):
+            return "കേരളത്തിൽ നെല്ല്, തെങ്ങ്, മസാല, പച്ചക്കറികൾ എന്നിവയുടെ കൃഷി നല്ലതാണ്. മഴക്കാലത്ത് നെൽകൃഷി തുടങ്ങുന്നത് നല്ലതാണ്. ഏത് വിളയെക്കുറിച്ച് അറിയാണം?"
+        elif any(word in message_lower for word in ["മഴ", "കാലാവസ്ഥ", "വെള്ളം"]):
+            return "കേരളത്തിൽ മഴക്കാലം ജൂൺ മുതൽ സെപ്റ്റംബർ വരെയാണ്. ഈ സമയത്ത് നെല് നടുന്നത് നല്ലതാണ്. മഴയ്ക്ക് ശേഷം തെങ്ങിന്റെയും മസാലകളുടെയും പരിചരണം ചെയ്യുക."
+        elif any(word in message_lower for word in ["രോഗം", "അസുഖം", "കീടം"]):
+            return "ചെടികളിലെ രോഗങ്ങളിൽ നിന്ന് രക്ഷപ്പെടാൻ വേപ്പെണ്ണ തളിക്കുക. ഇലകളിൽ പാടുകൾ കണ്ടാൽ ഉടനെ അത് നീക്കം ചെയ്യുക. ഞങ്ങളുടെ രോഗ കണ്ടെത്തൽ ഉപകരണം ഉപയോഗിക്കുക."
+        else:
+            return "ഞാൻ കൃഷി സഹായിയാണ്, കേരള കർഷകരെ സഹായിക്കുന്നു. നിങ്ങൾക്ക് കൃഷി, വിള, കാലാവസ്ഥയെക്കുറിച്ച് എന്നോട് ചോദിക്കാം."
+    
+    else:  # English
+        if any(word in message_lower for word in ["crop", "farming", "agriculture", "cultivation"]):
+            return "In Kerala, rice, coconut, spices, and vegetables grow very well. The monsoon season (June-September) is best for rice planting. Which crop would you like to know about?"
+        elif any(word in message_lower for word in ["weather", "rain", "monsoon", "water"]):
+            return "Kerala's monsoon season is from June to September. This is the best time for rice cultivation. After rains, take good care of coconut and spice plants."
+        elif any(word in message_lower for word in ["disease", "pest", "problem", "sick"]):
+            return "To protect plants from diseases, spray neem oil regularly. Remove infected leaves immediately. You can use our Disease Detector tool to identify plant problems."
+        elif any(word in message_lower for word in ["price", "market", "sell", "buying"]):
+            return "Check our Market Prices section for current rates. Sell your crops when prices are good. Local markets usually give better prices than distant ones."
+        else:
+            return "Hello! I'm Krishi Saathi, your farming assistant for Kerala. Ask me about crops, farming methods, weather, or any agricultural questions you have."
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat_with_krishi_saathi(chat_message: ChatMessage):
+    """Chat with Krishi Saathi AI assistant with real-time data integration"""
+    try:
+        # Fetch real-time data to enhance the chatbot response
+        weather_data = await get_weather_data()
+        schemes_data = await get_schemes_data() 
+        market_data = await get_market_prices_data()
+        dashboard_data = await get_dashboard_data()
+        
+        # Get response with enhanced context
+        response = await get_enhanced_krishi_saathi_response(
+            chat_message.message, 
+            chat_message.language,
+            weather_data,
+            schemes_data, 
+            market_data,
+            dashboard_data
+        )
+        
+        return ChatResponse(
+            response=response,
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        print(f"Error in chat endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Sorry, I'm having trouble right now. Please try again."
+        )
+
+@app.get("/api/weather/location/{location}")
+async def get_weather_by_location(location: str):
+    """Get weather data for a specific Kerala location"""
+    try:
+        # Ensure location is in Kerala context
+        kerala_location = f"{location}, Kerala, India" if "Kerala" not in location else location
+        
+        weather_data = await get_weather_data(kerala_location)
+        
+        if weather_data:
+            return {
+                "success": True,
+                "data": weather_data,
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "success": False,
+                "error": "Unable to fetch weather data",
+                "timestamp": datetime.now().isoformat()
+            }
+    except Exception as e:
+        print(f"Error getting weather for location {location}: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/chatbot/context")
+async def get_chatbot_context(location: str = "Kochi, Kerala"):
+    """Get real-time context data for enhanced chatbot responses"""
+    try:
+        weather_data = await get_weather_data(location)
+        schemes_data = await get_schemes_data()
+        market_data = await get_market_prices_data()
+        dashboard_data = await get_dashboard_data()
+        
+        return {
+            "success": True,
+            "data": {
+                "weather": weather_data,
+                "schemes": schemes_data,
+                "market_prices": market_data,
+                "dashboard": dashboard_data,
+                "kerala_districts": KERALA_DISTRICTS
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        print(f"Error getting chatbot context: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
 # Root endpoint
 @app.get("/")
 async def root():
     """Root endpoint"""
     return {
         "message": "🌾 Simple Farmer Dashboard API",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "features": [
+            "Crop Disease Detection with AI",
+            "Krishi Saathi Chatbot with Voice Support", 
+            "Weather Integration",
+            "Market Prices",
+            "Government Schemes",
+            "Dashboard Analytics"
+        ]
     }
 
 

@@ -73,7 +73,16 @@ const Sidebar = ({
           : "Market Prices",
       icon: "📊",
     },
-
+    {
+      id: "disease-detector",
+      name:
+        language === "ml"
+          ? "രോഗ നിർണയം"
+          : language === "hi"
+          ? "रोग डिटेक्टर"
+          : "Disease Detector",
+      icon: "🔬",
+    },
     {
       id: "inventory",
       name:
@@ -114,7 +123,7 @@ const Sidebar = ({
     >
       {!isCollapsed && (
         <div className="p-6 border-b border-green-700">
-          <h2 className="text-xl font-bold">
+          <h2 className="text-xl font-bold text-white">
             🌾{" "}
             {language === "ml"
               ? "അഗ്രിഡാഷ്"
@@ -122,7 +131,7 @@ const Sidebar = ({
               ? "एग्रीडैश"
               : "AgriDash"}
           </h2>
-          <p className="text-green-200 text-sm">
+          <p className="text-sm text-green-200">
             {language === "ml"
               ? "കർഷക പോർട്ടൽ"
               : language === "hi"

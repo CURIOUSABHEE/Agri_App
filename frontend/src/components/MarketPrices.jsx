@@ -45,7 +45,11 @@ function MarketPrices({ language }) {
   const saveSettings = () => {
     localStorage.setItem("marketPricesFilters", JSON.stringify(filters));
     alert(
-      language === "malayalam" ? "ക്രമീകരണങ്ങൾ സംരക്ഷിച്ചു!" : "Settings saved!"
+      language === "ml"
+        ? "ക്രമീകരണങ്ങൾ സംരക്ഷിച്ചു!"
+        : language === "hi"
+        ? "सेटिंग्स सहेजी गई!"
+        : "Settings saved!"
     );
   };
 
@@ -144,11 +148,17 @@ function MarketPrices({ language }) {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {language === "malayalam" ? "വിപണി വിലകൾ" : "Market Prices"}
+          {language === "ml"
+            ? "വിപണി വിലകൾ"
+            : language === "hi"
+            ? "बाजार भाव"
+            : "Market Prices"}
         </h1>
         <p className="text-gray-600">
-          {language === "malayalam"
+          {language === "ml"
             ? "വിവിധ വിളകളുടെ നിലവിലെ വിപണി വിലകൾ കണ്ടെത്തുക"
+            : language === "hi"
+            ? "विभिन्न फसलों के वर्तमान बाजार भाव खोजें"
             : "Find current market prices for various crops"}
         </p>
       </div>
@@ -157,7 +167,11 @@ function MarketPrices({ language }) {
       <Card className="mb-6">
         <div className="p-6">
           <h2 className="text-xl font-semibold mb-4">
-            {language === "malayalam" ? "ഫിൽട്ടർ ചെയ്യുക" : "Filter Options"}
+            {language === "ml"
+              ? "ഫിൽട്ടർ ചെയ്യുക"
+              : language === "hi"
+              ? "फ़िल्टर विकल्प"
+              : "Filter Options"}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">

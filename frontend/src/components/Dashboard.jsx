@@ -6,6 +6,18 @@ const Dashboard = ({ language = "en" }) => {
   const [farmerData, setFarmerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [bookmarkedSchemes, setBookmarkedSchemes] = useState([]);
+
+  // Load bookmarked schemes from localStorage
+  useEffect(() => {
+    const loadBookmarks = () => {
+      const saved = localStorage.getItem("bookmarkedSchemes");
+      if (saved) {
+        setBookmarkedSchemes(JSON.parse(saved));
+      }
+    };
+    loadBookmarks();
+  }, []);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -25,6 +37,15 @@ const Dashboard = ({ language = "en" }) => {
 
     fetchDashboardData();
   }, []);
+
+  // Remove a bookmarked scheme
+  const removeBookmark = (schemeId) => {
+    const updatedBookmarks = bookmarkedSchemes.filter(
+      (scheme) => scheme.id !== schemeId
+    );
+    setBookmarkedSchemes(updatedBookmarks);
+    localStorage.setItem("bookmarkedSchemes", JSON.stringify(updatedBookmarks));
+  };
 
   if (loading) {
     return (
@@ -138,6 +159,81 @@ const Dashboard = ({ language = "en" }) => {
           </div>
         </Card>
       </div>
+
+      {/* Bookmarked Schemes Section */}
+      {bookmarkedSchemes.length > 0 && (
+        <div className="mt-8">
+          <Card className="p-6 bg-white rounded-lg shadow-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                🔖{" "}
+                {language === "ml"
+                  ? "ബുക്ക്മാർക്ക് ചെയ്ത പദ്ധതികൾ"
+                  : language === "hi"
+                  ? "बुकमार्क की गई योजनाएं"
+                  : "Bookmarked Schemes"}
+              </h2>
+              <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                {bookmarkedSchemes.length}{" "}
+                {bookmarkedSchemes.length === 1 ? "scheme" : "schemes"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {bookmarkedSchemes.slice(0, 4).map((scheme) => (
+                <div
+                  key={scheme.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-gray-800 text-sm leading-tight">
+                      {scheme.scheme_name}
+                    </h3>
+                    <button
+                      onClick={() => removeBookmark(scheme.id)}
+                      className="text-gray-400 hover:text-red-500 ml-2 flex-shrink-0"
+                      title="Remove bookmark"
+                    >
+                      ✖
+                    </button>
+                  </div>
+
+                  <div className="flex items-center space-x-2 text-xs mb-2">
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      {scheme.level || "Government"}
+                    </span>
+                    {scheme.category && (
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                        {scheme.category}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-gray-600 text-xs leading-relaxed line-clamp-2">
+                    {scheme.details && scheme.details.length > 120
+                      ? scheme.details.substring(0, 120) + "..."
+                      : scheme.details || "No details available"}
+                  </p>
+
+                  <div className="mt-3 pt-2 border-t border-gray-100">
+                    <button className="text-xs text-green-600 hover:text-green-700 font-medium">
+                      View Details →
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {bookmarkedSchemes.length > 4 && (
+              <div className="mt-4 text-center">
+                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                  View all {bookmarkedSchemes.length} bookmarked schemes →
+                </button>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       <div className="mt-8">
         <Card className="p-6 bg-white rounded-lg shadow-md">

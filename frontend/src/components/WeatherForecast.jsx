@@ -208,7 +208,11 @@ function WeatherForecast({ language }) {
               disabled={loading}
             >
               📍{" "}
-              {language === "malayalam" ? "നിലവിലെ സ്ഥലം" : "Current Location"}
+              {language === "ml"
+                ? "നിലവിലെ സ്ഥലം"
+                : language === "hi"
+                ? "वर्तमान स्थान"
+                : "Current Location"}
             </Button>
           </div>
         </div>

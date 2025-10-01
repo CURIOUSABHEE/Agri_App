@@ -6,6 +6,9 @@ import Schemes from "./Schemes";
 import MarketPrices from "./MarketPrices";
 import WeatherForecast from "./WeatherForecast";
 import InventoryManagement from "./InventoryManagement";
+import DiseaseDetector from "./DiseaseDetector";
+import Settings from "./Settings";
+import FloatingChatbot from "./FloatingChatbot";
 
 const Layout = () => {
   const [activeItem, setActiveItem] = useState("dashboard");
@@ -30,8 +33,12 @@ const Layout = () => {
         return <MarketPrices language={language} />;
       case "weather":
         return <WeatherForecast language={language} />;
+      case "disease-detector":
+        return <DiseaseDetector language={language} />;
       case "inventory":
         return <InventoryManagement language={language} />;
+      case "settings":
+        return <Settings language={language} />;
       default:
         return (
           <div className="p-6 bg-gray-50 min-h-screen">
@@ -74,6 +81,9 @@ const Layout = () => {
         />
         <div className="flex-1 overflow-y-auto">{renderContent()}</div>
       </div>
+
+      {/* Floating Chatbot - available on all pages */}
+      <FloatingChatbot language={language} />
     </div>
   );
 };
