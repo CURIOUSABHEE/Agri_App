@@ -23,13 +23,28 @@ const Dashboard = ({ language = "en" }) => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        console.log(
+          "Fetching dashboard data from:",
+          "http://localhost:8000/api/dashboard"
+        );
         const response = await dashboardService.getDashboardData();
+        console.log("Dashboard API response:", response);
+
         if (response.success) {
           setFarmerData(response.farmer);
+          console.log("Farmer data loaded:", response.farmer);
+        } else {
+          throw new Error(response.message || "API returned success: false");
         }
       } catch (err) {
-        setError("Failed to load dashboard data");
-        console.error("Error:", err);
+        console.error("Dashboard loading error:", err);
+        console.error("Error details:", {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+        });
+
+        setError(`Failed to load dashboard data: ${err.message}`);
       } finally {
         setLoading(false);
       }

@@ -1,6 +1,41 @@
+// Helper to safely render field values (string, object, array)
+const renderField = (field, opts = {}) => {
+  if (typeof field === "string") {
+    // Optionally trim for benefits if opts.maxLen
+    if (opts.maxLen && field.length > opts.maxLen) {
+      return field.substring(0, opts.maxLen) + "...";
+    }
+    return field;
+  } else if (Array.isArray(field)) {
+    // Render array as comma separated string
+    return field.join(", ");
+  } else if (typeof field === "object" && field !== null) {
+    // Render object as key: value pairs, arrays as comma separated
+    return Object.entries(field)
+      .map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return `${key}: ${value.join(", ")}`;
+        } else if (typeof value === "object" && value !== null) {
+          // Nested object, flatten one level
+          return `${key}: { ${Object.entries(value)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+            .join(", ")} }`;
+        } else {
+          return `${key}: ${value}`;
+        }
+      })
+      .join("; ");
+  } else if (field !== undefined && field !== null) {
+    // fallback for numbers etc.
+    return String(field);
+  }
+  // If null/undefined
+  return "";
+};
 import React, { useState, useEffect } from "react";
 import { schemesService } from "../services/api";
 import { Card } from "./ui/Card";
+import { getMultilingualOptions } from "../utils/languageOptions";
 
 const Schemes = ({ language = "en" }) => {
   const [schemes, setSchemes] = useState([]);
@@ -44,41 +79,10 @@ const Schemes = ({ language = "en" }) => {
     return bookmarkedSchemes.some((b) => b.id === schemeId);
   };
 
-  // Indian states list
-  const indianStates = [
-    "Andhra Pradesh",
-    "Arunachal Pradesh",
-    "Assam",
-    "Bihar",
-    "Chhattisgarh",
-    "Goa",
-    "Gujarat",
-    "Haryana",
-    "Himachal Pradesh",
-    "Jharkhand",
-    "Karnataka",
-    "Kerala",
-    "Madhya Pradesh",
-    "Maharashtra",
-    "Manipur",
-    "Meghalaya",
-    "Mizoram",
-    "Nagaland",
-    "Odisha",
-    "Punjab",
-    "Rajasthan",
-    "Sikkim",
-    "Tamil Nadu",
-    "Telangana",
-    "Tripura",
-    "Uttar Pradesh",
-    "Uttarakhand",
-    "West Bengal",
-    "Delhi",
-    "Puducherry",
-    "Jammu and Kashmir",
-    "Ladakh",
-  ];
+  // Get multilingual options based on current language
+  const languageOptions = getMultilingualOptions(language);
+  const stateOptions = languageOptions.states;
+  const sectorOptions = languageOptions.sectors;
 
   const fetchSchemes = async (
     search = searchQuery,
@@ -190,10 +194,9 @@ const Schemes = ({ language = "en" }) => {
                 onChange={(e) => handleStateChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="">All States/UTs</option>
-                {indianStates.map((state) => (
-                  <option key={state} value={state}>
-                    {state}
+                {stateOptions.map((state) => (
+                  <option key={state.value} value={state.value}>
+                    {state.label}
                   </option>
                 ))}
               </select>
@@ -213,8 +216,11 @@ const Schemes = ({ language = "en" }) => {
                 onChange={(e) => handleSectorChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="agriculture">Agriculture & Rural</option>
-                <option value="all">All Sectors</option>
+                {sectorOptions.map((sector) => (
+                  <option key={sector.value} value={sector.value}>
+                    {sector.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -281,9 +287,9 @@ const Schemes = ({ language = "en" }) => {
                 </div>
 
                 <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">
-                  {scheme.details && scheme.details.length > 120
-                    ? scheme.details.substring(0, 120) + "..."
-                    : scheme.details || "No details available"}
+                  {scheme.details
+                    ? renderField(scheme.details, { maxLen: 120 })
+                    : "No details available"}
                 </p>
 
                 <div className="mt-3 pt-2 border-t border-gray-100">
@@ -411,7 +417,7 @@ const Schemes = ({ language = "en" }) => {
                     Description:
                   </h4>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    {scheme.details}
+                    {renderField(scheme.details)}
                   </p>
                 </div>
 
@@ -421,9 +427,7 @@ const Schemes = ({ language = "en" }) => {
                       Benefits:
                     </h4>
                     <p className="text-gray-600 text-sm leading-relaxed">
-                      {scheme.benefits.length > 200
-                        ? scheme.benefits.substring(0, 200) + "..."
-                        : scheme.benefits}
+                      {renderField(scheme.benefits, { maxLen: 200 })}
                     </p>
                   </div>
                 )}
@@ -434,7 +438,7 @@ const Schemes = ({ language = "en" }) => {
                       Eligibility:
                     </h4>
                     <p className="text-gray-600 text-sm leading-relaxed">
-                      {scheme.eligibility}
+                      {renderField(scheme.eligibility)}
                     </p>
                   </div>
                 )}

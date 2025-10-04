@@ -120,4 +120,34 @@ export const inventoryService = {
   },
 };
 
+// Crop Prediction service
+export const cropPredictionService = {
+  predictCrops: async (predictionData) => {
+    const response = await api.post("/crop-prediction/predict", predictionData);
+    return response.data;
+  },
+
+  getCropDetails: async (cropKey) => {
+    const response = await api.get(`/crop-prediction/crop/${cropKey}`);
+    return response.data;
+  },
+
+  getSeasonalRecommendations: async (season, state) => {
+    const params = new URLSearchParams();
+    params.append("state", state);
+
+    const response = await api.get(
+      `/crop-prediction/seasonal/${season}?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  getPredictionOptions: async (language = "en") => {
+    const response = await api.get(
+      `/crop-prediction/options?language=${language}`
+    );
+    return response.data;
+  },
+};
+
 export default api;

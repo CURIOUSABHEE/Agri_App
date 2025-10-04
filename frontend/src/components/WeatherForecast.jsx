@@ -4,6 +4,7 @@ import { Card } from "./ui/Card";
 import { Input } from "./ui/Input";
 import { Label } from "./ui/Label";
 import { Button } from "./ui/Button";
+import { getWeatherCityOptions } from "../utils/languageOptions";
 
 function WeatherForecast({ language }) {
   const [currentWeather, setCurrentWeather] = useState(null);
@@ -166,13 +167,48 @@ function WeatherForecast({ language }) {
           </h2>
 
           <div className="flex gap-4 items-end">
+            {/* Quick City Selector */}
+            <div className="flex-1">
+              <Label htmlFor="citySelector">
+                {language === "ml"
+                  ? "പ്രധാന നഗരങ്ങൾ"
+                  : language === "hi"
+                  ? "मुख्य शहर"
+                  : "Quick Select"}
+              </Label>
+              <select
+                id="citySelector"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleLocationChange(e.target.value);
+                    setTimeout(() => handleCitySearch(), 100);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">
+                  {language === "ml"
+                    ? "നഗരം തിരഞ്ഞെടുക്കുക"
+                    : language === "hi"
+                    ? "शहर चुनें"
+                    : "Select City"}
+                </option>
+                {getWeatherCityOptions(language).map((city) => (
+                  <option key={city.value} value={city.value}>
+                    {city.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Custom City Input */}
             <div className="flex-1">
               <Label htmlFor="city">
                 {language === "ml"
-                  ? "നഗരം"
+                  ? "അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യുക"
                   : language === "hi"
-                  ? "शहर"
-                  : "City"}
+                  ? "या टाइप करें"
+                  : "Or Type City"}
               </Label>
               <Input
                 type="text"
@@ -240,8 +276,12 @@ function WeatherForecast({ language }) {
               <div className="flex items-center space-x-4">
                 <div className="flex-shrink-0">
                   <img
-                    src={getWeatherIcon(currentWeather.weather.icon, true)}
-                    alt={currentWeather.weather.description}
+                    src={
+                      currentWeather?.weather?.icon
+                        ? getWeatherIcon(currentWeather.weather.icon, true)
+                        : "https://openweathermap.org/img/wn/01d@4x.png"
+                    }
+                    alt={currentWeather?.weather?.description || ""}
                     className="w-20 h-20"
                   />
                 </div>
@@ -251,7 +291,7 @@ function WeatherForecast({ language }) {
                     {currentWeather.country && `, ${currentWeather.country}`}
                   </h3>
                   <p className="text-gray-600 capitalize">
-                    {currentWeather.weather.description}
+                    {currentWeather?.weather?.description || ""}
                   </p>
                   <p
                     className={`text-4xl font-bold ${getTemperatureColor(
@@ -388,12 +428,16 @@ function WeatherForecast({ language }) {
 
                   <div className="mb-3">
                     <img
-                      src={getWeatherIcon(day.weather.icon)}
-                      alt={day.weather.description}
+                      src={
+                        day?.weather?.icon
+                          ? getWeatherIcon(day.weather.icon)
+                          : "https://openweathermap.org/img/wn/01d@2x.png"
+                      }
+                      alt={day?.weather?.description || ""}
                       className="w-12 h-12 mx-auto"
                     />
                     <p className="text-xs text-gray-600 capitalize">
-                      {day.weather.description}
+                      {day?.weather?.description || ""}
                     </p>
                   </div>
 

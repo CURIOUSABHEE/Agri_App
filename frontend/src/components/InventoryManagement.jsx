@@ -4,8 +4,14 @@ import { Card } from "./ui/Card";
 import { Input } from "./ui/Input";
 import { Label } from "./ui/Label";
 import { Button } from "./ui/Button";
+import { getMultilingualOptions } from "../utils/languageOptions";
 
 function InventoryManagement({ language }) {
+  // Get multilingual options
+  const languageOptions = getMultilingualOptions(language);
+  const categoryOptions = languageOptions.categories;
+  const sortOptions = languageOptions.sortOptions;
+
   const [inventoryData, setInventoryData] = useState({
     summary: {
       totalValue: 0,
@@ -79,7 +85,9 @@ function InventoryManagement({ language }) {
       }
     } catch (err) {
       setError(
-        language === "malayalam"
+        language === "hi"
+          ? "इन्वेंटरी डेटा लोड करने में असफल"
+          : language === "ml"
           ? "ഇൻവെന്ററി വിവരങ്ങൾ കണ്ടെത്താൻ കഴിഞ്ഞില്ല"
           : "Failed to fetch inventory data"
       );
@@ -96,7 +104,9 @@ function InventoryManagement({ language }) {
   const handleAddItem = async () => {
     if (!newItem.name || !newItem.quantity || !newItem.pricePerUnit) {
       alert(
-        language === "malayalam"
+        language === "hi"
+          ? "कृपया आवश्यक फ़ील्ड भरें"
+          : language === "ml"
           ? "ആവശ്യമായ ഫീൽഡുകൾ പൂരിപ്പിക്കുക"
           : "Please fill required fields"
       );
@@ -120,12 +130,18 @@ function InventoryManagement({ language }) {
       setShowAddItem(false);
       fetchInventoryData();
       alert(
-        language === "malayalam" ? "വസ്തു ചേർത്തു!" : "Item added successfully!"
+        language === "hi"
+          ? "आइटम सफलतापूर्वक जोड़ा गया!"
+          : language === "ml"
+          ? "വസ്തു ചേർത്തു!"
+          : "Item added successfully!"
       );
     } catch (err) {
       console.error("Error adding item:", err);
       alert(
-        language === "malayalam"
+        language === "hi"
+          ? "आइटम जोड़ने में असफल"
+          : language === "ml"
           ? "വസ്തു ചേർക്കാൻ കഴിഞ്ഞില്ല"
           : "Failed to add item"
       );
@@ -139,7 +155,9 @@ function InventoryManagement({ language }) {
     } catch (err) {
       console.error("Error updating stock:", err);
       alert(
-        language === "malayalam"
+        language === "hi"
+          ? "स्टॉक अपडेट करने में असफल"
+          : language === "ml"
           ? "സ്റ്റോക്ക് അപ്‌ഡേറ്റ് ചെയ്യാൻ കഴിഞ്ഞില്ല"
           : "Failed to update stock"
       );
@@ -175,12 +193,16 @@ function InventoryManagement({ language }) {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {language === "malayalam"
+          {language === "hi"
+            ? "इन्वेंटरी प्रबंधन"
+            : language === "ml"
             ? "ഇൻവെന്ററി മാനേജ്മെന്റ്"
             : "Inventory Management"}
         </h1>
         <p className="text-gray-600">
-          {language === "malayalam"
+          {language === "hi"
+            ? "अपनी कृषि सामग्री और उत्पादन की सूची का ट्रैक रखें"
+            : language === "ml"
             ? "നിങ്ങളുടെ കാർഷിക സാമഗ്രികളും ഉൽപ്പാദനങ്ങളും ട്രാക്ക് ചെയ്യുക"
             : "Track your farm inputs and produce inventory"}
         </p>
@@ -193,7 +215,11 @@ function InventoryManagement({ language }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  {language === "malayalam" ? "മൊത്തം മൂല്യം" : "Total Value"}
+                  {language === "hi"
+                    ? "कुल मूल्य"
+                    : language === "ml"
+                    ? "മൊത്തം മൂല്യം"
+                    : "Total Value"}
                 </p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(inventoryData.summary.totalValue)}
@@ -209,7 +235,11 @@ function InventoryManagement({ language }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  {language === "malayalam" ? "മൊത്തം ഇനങ്ങൾ" : "Total Items"}
+                  {language === "hi"
+                    ? "कुल आइटम"
+                    : language === "ml"
+                    ? "മൊത്തം ഇനങ്ങൾ"
+                    : "Total Items"}
                 </p>
                 <p className="text-2xl font-bold text-blue-600">
                   {inventoryData.summary.totalItems}
@@ -225,7 +255,11 @@ function InventoryManagement({ language }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  {language === "malayalam" ? "കുറഞ്ഞ സ്റ്റോക്ക്" : "Low Stock"}
+                  {language === "hi"
+                    ? "कम स्टॉक"
+                    : language === "ml"
+                    ? "കുറഞ്ഞ സ്റ്റോക്ക്"
+                    : "Low Stock"}
                 </p>
                 <p className="text-2xl font-bold text-orange-600">
                   {inventoryData.summary.lowStockCount}
@@ -241,7 +275,9 @@ function InventoryManagement({ language }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  {language === "malayalam"
+                  {language === "hi"
+                    ? "जल्द समाप्त"
+                    : language === "ml"
                     ? "കാലഹരണപ്പെടുന്നവ"
                     : "Expiring Soon"}
                 </p>
@@ -260,13 +296,19 @@ function InventoryManagement({ language }) {
         <div className="p-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
             <h2 className="text-xl font-semibold">
-              {language === "malayalam"
+              {language === "hi"
+                ? "इन्वेंटरी आइटम"
+                : language === "ml"
                 ? "ഇൻവെന്ററി ഇനങ്ങൾ"
                 : "Inventory Items"}
             </h2>
             <Button onClick={() => setShowAddItem(true)}>
               +{" "}
-              {language === "malayalam" ? "പുതിയ ഇനം ചേർക്കുക" : "Add New Item"}
+              {language === "hi"
+                ? "नया आइटम जोड़ें"
+                : language === "ml"
+                ? "പുതിയ ഇനം ചേർക്കുക"
+                : "Add New Item"}
             </Button>
           </div>
 
@@ -274,7 +316,11 @@ function InventoryManagement({ language }) {
             {/* Category Filter */}
             <div>
               <Label htmlFor="category">
-                {language === "malayalam" ? "വിഭാഗം" : "Category"}
+                {language === "hi"
+                  ? "श्रेणी"
+                  : language === "ml"
+                  ? "വിഭാഗം"
+                  : "Category"}
               </Label>
               <select
                 id="category"
@@ -282,26 +328,22 @@ function InventoryManagement({ language }) {
                 onChange={(e) => handleFilterChange("category", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">
-                  {language === "malayalam" ? "എല്ലാം" : "All Categories"}
-                </option>
-                <option value="inputs">
-                  {language === "malayalam"
-                    ? "കാർഷിക സാമഗ്രികൾ"
-                    : "Farm Inputs"}
-                </option>
-                <option value="produce">
-                  {language === "malayalam"
-                    ? "കാർഷിക ഉൽപ്പാദനങ്ങൾ"
-                    : "Farm Produce"}
-                </option>
+                {categoryOptions.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             {/* Search */}
             <div>
               <Label htmlFor="search">
-                {language === "malayalam" ? "തിരയുക" : "Search"}
+                {language === "hi"
+                  ? "खोजें"
+                  : language === "ml"
+                  ? "തിരയുക"
+                  : "Search"}
               </Label>
               <Input
                 type="text"
@@ -309,7 +351,11 @@ function InventoryManagement({ language }) {
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
                 placeholder={
-                  language === "malayalam" ? "ഇനത്തിന്റെ പേര്" : "Item name..."
+                  language === "hi"
+                    ? "आइटम का नाम..."
+                    : language === "ml"
+                    ? "ഇനത്തിന്റെ പേര്"
+                    : "Item name..."
                 }
               />
             </div>
@@ -317,7 +363,11 @@ function InventoryManagement({ language }) {
             {/* Sort By */}
             <div>
               <Label htmlFor="sortBy">
-                {language === "malayalam" ? "ക്രമീകരിക്കുക" : "Sort By"}
+                {language === "hi"
+                  ? "क्रमबद्ध करें"
+                  : language === "ml"
+                  ? "ക്രമീകരിക്കുക"
+                  : "Sort By"}
               </Label>
               <select
                 id="sortBy"
@@ -325,18 +375,11 @@ function InventoryManagement({ language }) {
                 onChange={(e) => handleFilterChange("sortBy", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="name">
-                  {language === "malayalam" ? "പേര്" : "Name"}
-                </option>
-                <option value="quantity">
-                  {language === "malayalam" ? "അളവ്" : "Quantity"}
-                </option>
-                <option value="expiry">
-                  {language === "malayalam" ? "കാലാവധി" : "Expiry Date"}
-                </option>
-                <option value="value">
-                  {language === "malayalam" ? "മൂല്യം" : "Value"}
-                </option>
+                {sortOptions.map((sort) => (
+                  <option key={sort.value} value={sort.value}>
+                    {sort.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -352,7 +395,9 @@ function InventoryManagement({ language }) {
                   className="rounded"
                 />
                 <span className="text-sm">
-                  {language === "malayalam"
+                  {language === "hi"
+                    ? "केवल कम स्टॉक"
+                    : language === "ml"
                     ? "കുറഞ്ഞ സ്റ്റോക്ക്"
                     : "Low Stock Only"}
                 </span>
@@ -367,7 +412,9 @@ function InventoryManagement({ language }) {
                   className="rounded"
                 />
                 <span className="text-sm">
-                  {language === "malayalam"
+                  {language === "hi"
+                    ? "जल्द समाप्त"
+                    : language === "ml"
                     ? "കാലഹരണപ്പെടുന്നവ"
                     : "Expiring Soon"}
                 </span>
@@ -400,10 +447,14 @@ function InventoryManagement({ language }) {
                     <p className="text-sm text-gray-600">
                       {item.subcategory} •{" "}
                       {item.category === "inputs"
-                        ? language === "malayalam"
+                        ? language === "hi"
+                          ? "सामग्री"
+                          : language === "ml"
                           ? "സാമഗ്രികൾ"
                           : "Inputs"
-                        : language === "malayalam"
+                        : language === "hi"
+                        ? "उत्पादन"
+                        : language === "ml"
                         ? "ഉൽപ്പാദനങ്ങൾ"
                         : "Produce"}
                     </p>
@@ -414,7 +465,11 @@ function InventoryManagement({ language }) {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <p className="text-sm text-gray-600">
-                      {language === "malayalam" ? "അളവ്" : "Quantity"}
+                      {language === "hi"
+                        ? "मात्रा"
+                        : language === "ml"
+                        ? "അളവ്"
+                        : "Quantity"}
                     </p>
                     <p className="font-semibold">
                       {item.quantity} {item.unit}
@@ -422,7 +477,11 @@ function InventoryManagement({ language }) {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">
-                      {language === "malayalam" ? "മൂല്യം" : "Value"}
+                      {language === "hi"
+                        ? "मूल्य"
+                        : language === "ml"
+                        ? "മൂല്യം"
+                        : "Value"}
                     </p>
                     <p className="font-semibold">
                       {formatCurrency(item.totalValue)}
@@ -434,14 +493,23 @@ function InventoryManagement({ language }) {
                 {item.expiryDate && (
                   <div className="mb-4">
                     <p className="text-sm text-gray-600">
-                      {language === "malayalam" ? "കാലാവധി" : "Expiry Date"}
+                      {language === "hi"
+                        ? "समाप्ति तिथि"
+                        : language === "ml"
+                        ? "കാലാവധി"
+                        : "Expiry Date"}
                     </p>
                     <p className={`font-semibold ${getStatusColor(item)}`}>
                       {formatDate(item.expiryDate)}
                       {item.daysToExpiry >= 0 && (
                         <span className="text-sm ml-2">
                           ({item.daysToExpiry}{" "}
-                          {language === "malayalam" ? "ദിവസം" : "days"})
+                          {language === "hi"
+                            ? "दिन"
+                            : language === "ml"
+                            ? "ദിവസം"
+                            : "days"}
+                          )
                         </span>
                       )}
                     </p>
@@ -452,7 +520,9 @@ function InventoryManagement({ language }) {
                 <div className="mb-4">
                   <div className="flex justify-between text-sm text-gray-600 mb-1">
                     <span>
-                      {language === "malayalam"
+                      {language === "hi"
+                        ? "स्टॉक स्तर"
+                        : language === "ml"
                         ? "സ്റ്റോക്ക് നില"
                         : "Stock Level"}
                     </span>
@@ -484,7 +554,9 @@ function InventoryManagement({ language }) {
                     variant="outline"
                     onClick={() => {
                       const newQty = prompt(
-                        language === "malayalam"
+                        language === "hi"
+                          ? "नई मात्रा दर्ज करें:"
+                          : language === "ml"
                           ? "പുതിയ അളവ് നൽകുക:"
                           : "Enter new quantity:",
                         item.quantity
@@ -494,14 +566,20 @@ function InventoryManagement({ language }) {
                       }
                     }}
                   >
-                    {language === "malayalam" ? "അപ്‌ഡേറ്റ്" : "Update"}
+                    {language === "hi"
+                      ? "अपडेट"
+                      : language === "ml"
+                      ? "അപ്‌ഡേറ്റ്"
+                      : "Update"}
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => {
                       const addQty = prompt(
-                        language === "malayalam"
+                        language === "hi"
+                          ? "जोड़ने के लिए मात्रा:"
+                          : language === "ml"
                           ? "ചേർക്കാനുള്ള അളവ്:"
                           : "Quantity to add:",
                         "0"
@@ -515,7 +593,12 @@ function InventoryManagement({ language }) {
                       }
                     }}
                   >
-                    + {language === "malayalam" ? "ചേർക്കുക" : "Add"}
+                    +{" "}
+                    {language === "hi"
+                      ? "जोड़ें"
+                      : language === "ml"
+                      ? "ചേർക്കുക"
+                      : "Add"}
                   </Button>
                 </div>
               </div>
@@ -529,7 +612,9 @@ function InventoryManagement({ language }) {
         <Card>
           <div className="p-6">
             <h2 className="text-xl font-semibold mb-4">
-              {language === "malayalam"
+              {language === "hi"
+                ? "हाल की लेनदेन"
+                : language === "ml"
                 ? "സമീപകാല ഇടപാടുകൾ"
                 : "Recent Transactions"}
             </h2>
@@ -538,16 +623,32 @@ function InventoryManagement({ language }) {
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-2">
-                      {language === "malayalam" ? "ഇനം" : "Item"}
+                      {language === "hi"
+                        ? "वस्तु"
+                        : language === "ml"
+                        ? "ഇനം"
+                        : "Item"}
                     </th>
                     <th className="text-left py-2">
-                      {language === "malayalam" ? "തരം" : "Type"}
+                      {language === "hi"
+                        ? "प्रकार"
+                        : language === "ml"
+                        ? "തരം"
+                        : "Type"}
                     </th>
                     <th className="text-left py-2">
-                      {language === "malayalam" ? "അളവ്" : "Quantity"}
+                      {language === "hi"
+                        ? "मात्रा"
+                        : language === "ml"
+                        ? "അളവ്"
+                        : "Quantity"}
                     </th>
                     <th className="text-left py-2">
-                      {language === "malayalam" ? "തീയതി" : "Date"}
+                      {language === "hi"
+                        ? "दिनांक"
+                        : language === "ml"
+                        ? "തീയതി"
+                        : "Date"}
                     </th>
                   </tr>
                 </thead>
@@ -569,14 +670,20 @@ function InventoryManagement({ language }) {
                           }`}
                         >
                           {transaction.type === "purchase"
-                            ? language === "malayalam"
+                            ? language === "hi"
+                              ? "खरीद"
+                              : language === "ml"
                               ? "വാങ്ങൽ"
                               : "Purchase"
                             : transaction.type === "sale"
-                            ? language === "malayalam"
+                            ? language === "hi"
+                              ? "बिक्री"
+                              : language === "ml"
                               ? "വിൽപ്പന"
                               : "Sale"
-                            : language === "malayalam"
+                            : language === "hi"
+                            ? "समायोजन"
+                            : language === "ml"
                             ? "ക്രമീകരണം"
                             : "Adjustment"}
                         </span>
@@ -604,7 +711,9 @@ function InventoryManagement({ language }) {
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">
-                {language === "malayalam"
+                {language === "hi"
+                  ? "नया आइटम जोड़ें"
+                  : language === "ml"
                   ? "പുതിയ ഇനം ചേർക്കുക"
                   : "Add New Item"}
               </h2>
@@ -612,7 +721,11 @@ function InventoryManagement({ language }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="itemName">
-                    {language === "malayalam" ? "ഇനത്തിന്റെ പേര്" : "Item Name"}{" "}
+                    {language === "hi"
+                      ? "वस्तु का नाम"
+                      : language === "ml"
+                      ? "ഇനത്തിന്റെ പേര്"
+                      : "Item Name"}{" "}
                     *
                   </Label>
                   <Input
@@ -623,7 +736,9 @@ function InventoryManagement({ language }) {
                       setNewItem((prev) => ({ ...prev, name: e.target.value }))
                     }
                     placeholder={
-                      language === "malayalam"
+                      language === "hi"
+                        ? "वस्तु का नाम दर्ज करें"
+                        : language === "ml"
                         ? "ഇനത്തിന്റെ പേര്"
                         : "Enter item name"
                     }
@@ -632,7 +747,12 @@ function InventoryManagement({ language }) {
 
                 <div>
                   <Label htmlFor="itemCategory">
-                    {language === "malayalam" ? "വിഭാഗം" : "Category"} *
+                    {language === "hi"
+                      ? "श्रेणी"
+                      : language === "ml"
+                      ? "വിഭാഗം"
+                      : "Category"}{" "}
+                    *
                   </Label>
                   <select
                     id="itemCategory"
@@ -646,12 +766,16 @@ function InventoryManagement({ language }) {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="inputs">
-                      {language === "malayalam"
+                      {language === "hi"
+                        ? "कृषि सामग्री"
+                        : language === "ml"
                         ? "കാർഷിക സാമഗ്രികൾ"
                         : "Farm Inputs"}
                     </option>
                     <option value="produce">
-                      {language === "malayalam"
+                      {language === "hi"
+                        ? "कृषि उत्पादन"
+                        : language === "ml"
                         ? "കാർഷിക ഉൽപ്പാദനങ്ങൾ"
                         : "Farm Produce"}
                     </option>
@@ -660,7 +784,11 @@ function InventoryManagement({ language }) {
 
                 <div>
                   <Label htmlFor="subcategory">
-                    {language === "malayalam" ? "ഉപവിഭാഗം" : "Subcategory"}
+                    {language === "hi"
+                      ? "उपश्रेणी"
+                      : language === "ml"
+                      ? "ഉപവിഭാഗം"
+                      : "Subcategory"}
                   </Label>
                   <Input
                     type="text"
@@ -673,7 +801,9 @@ function InventoryManagement({ language }) {
                       }))
                     }
                     placeholder={
-                      language === "malayalam"
+                      language === "hi"
+                        ? "उदा: बीज, खाद"
+                        : language === "ml"
                         ? "ഉദാ: വിത്തുകൾ, വളം"
                         : "e.g: Seeds, Fertilizer"
                     }
@@ -682,7 +812,12 @@ function InventoryManagement({ language }) {
 
                 <div>
                   <Label htmlFor="quantity">
-                    {language === "malayalam" ? "അളവ്" : "Quantity"} *
+                    {language === "hi"
+                      ? "मात्रा"
+                      : language === "ml"
+                      ? "അളവ്"
+                      : "Quantity"}{" "}
+                    *
                   </Label>
                   <Input
                     type="number"
@@ -700,7 +835,11 @@ function InventoryManagement({ language }) {
 
                 <div>
                   <Label htmlFor="unit">
-                    {language === "malayalam" ? "യൂണിറ്റ്" : "Unit"}
+                    {language === "hi"
+                      ? "इकाई"
+                      : language === "ml"
+                      ? "യൂണിറ്റ്"
+                      : "Unit"}
                   </Label>
                   <Input
                     type="text"
@@ -710,7 +849,9 @@ function InventoryManagement({ language }) {
                       setNewItem((prev) => ({ ...prev, unit: e.target.value }))
                     }
                     placeholder={
-                      language === "malayalam"
+                      language === "hi"
+                        ? "किलो, लीटर, बैग"
+                        : language === "ml"
                         ? "കിലോ, ലിറ്റർ, ബാഗ്"
                         : "kg, ltr, bags"
                     }
@@ -719,7 +860,9 @@ function InventoryManagement({ language }) {
 
                 <div>
                   <Label htmlFor="pricePerUnit">
-                    {language === "malayalam"
+                    {language === "hi"
+                      ? "प्रति यूनिट कीमत"
+                      : language === "ml"
                       ? "യൂണിറ്റ് വില"
                       : "Price per Unit"}{" "}
                     *
@@ -740,7 +883,11 @@ function InventoryManagement({ language }) {
 
                 <div>
                   <Label htmlFor="expiryDate">
-                    {language === "malayalam" ? "കാലാവധി" : "Expiry Date"}
+                    {language === "hi"
+                      ? "समाप्ति तिथि"
+                      : language === "ml"
+                      ? "കാലാവധി"
+                      : "Expiry Date"}
                   </Label>
                   <Input
                     type="date"
@@ -757,7 +904,9 @@ function InventoryManagement({ language }) {
 
                 <div>
                   <Label htmlFor="minStockLevel">
-                    {language === "malayalam"
+                    {language === "hi"
+                      ? "न्यूनतम स्टॉक स्तर"
+                      : language === "ml"
                       ? "കുറഞ്ഞ സ്റ്റോക്ക് ലെവൽ"
                       : "Min Stock Level"}
                   </Label>
@@ -777,7 +926,11 @@ function InventoryManagement({ language }) {
 
                 <div>
                   <Label htmlFor="supplier">
-                    {language === "malayalam" ? "വിതരണക്കാരൻ" : "Supplier"}
+                    {language === "hi"
+                      ? "आपूर्तिकर्ता"
+                      : language === "ml"
+                      ? "വിതരണക്കാരൻ"
+                      : "Supplier"}
                   </Label>
                   <Input
                     type="text"
@@ -790,7 +943,9 @@ function InventoryManagement({ language }) {
                       }))
                     }
                     placeholder={
-                      language === "malayalam"
+                      language === "hi"
+                        ? "आपूर्तिकर्ता का नाम"
+                        : language === "ml"
                         ? "വിതരണക്കാരന്റെ പേര്"
                         : "Supplier name"
                     }
@@ -799,7 +954,11 @@ function InventoryManagement({ language }) {
 
                 <div>
                   <Label htmlFor="location">
-                    {language === "malayalam" ? "സ്ഥലം" : "Storage Location"}
+                    {language === "hi"
+                      ? "भंडारण स्थान"
+                      : language === "ml"
+                      ? "സ്ഥലം"
+                      : "Storage Location"}
                   </Label>
                   <Input
                     type="text"
@@ -812,7 +971,9 @@ function InventoryManagement({ language }) {
                       }))
                     }
                     placeholder={
-                      language === "malayalam"
+                      language === "hi"
+                        ? "भंडारण स्थान"
+                        : language === "ml"
                         ? "സംഭരണ സ്ഥലം"
                         : "Storage location"
                     }
@@ -822,10 +983,18 @@ function InventoryManagement({ language }) {
 
               <div className="flex space-x-3 mt-6">
                 <Button onClick={handleAddItem}>
-                  {language === "malayalam" ? "ചേർക്കുക" : "Add Item"}
+                  {language === "hi"
+                    ? "वस्तु जोड़ें"
+                    : language === "ml"
+                    ? "ചേർക്കുക"
+                    : "Add Item"}
                 </Button>
                 <Button variant="outline" onClick={() => setShowAddItem(false)}>
-                  {language === "malayalam" ? "റദ്ദാക്കുക" : "Cancel"}
+                  {language === "hi"
+                    ? "रद्द करें"
+                    : language === "ml"
+                    ? "റദ്ദാക്കുക"
+                    : "Cancel"}
                 </Button>
               </div>
             </div>
@@ -839,7 +1008,9 @@ function InventoryManagement({ language }) {
           <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <p className="text-gray-500">
-              {language === "malayalam"
+              {language === "hi"
+                ? "इन्वेंटरी लोड हो रही है..."
+                : language === "ml"
                 ? "ഇൻവെന്ററി ലോഡ് ചെയ്യുന്നു..."
                 : "Loading inventory..."}
             </p>
@@ -855,12 +1026,16 @@ function InventoryManagement({ language }) {
               <span className="text-6xl">📦</span>
             </div>
             <p className="text-gray-500 mb-4">
-              {language === "malayalam"
+              {language === "hi"
+                ? "इन्वेंटरी में कोई वस्तुएं नहीं हैं"
+                : language === "ml"
                 ? "ഇൻവെന്ററിയിൽ ഇനങ്ങളൊന്നുമില്ല"
                 : "No items in inventory"}
             </p>
             <Button onClick={() => setShowAddItem(true)}>
-              {language === "malayalam"
+              {language === "hi"
+                ? "पहला आइटम जोड़ें"
+                : language === "ml"
                 ? "ആദ്യത്തെ ഇനം ചേർക്കുക"
                 : "Add First Item"}
             </Button>

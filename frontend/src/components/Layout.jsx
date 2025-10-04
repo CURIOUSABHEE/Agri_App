@@ -7,10 +7,11 @@ import MarketPrices from "./MarketPrices";
 import WeatherForecast from "./WeatherForecast";
 import InventoryManagement from "./InventoryManagement";
 import DiseaseDetector from "./DiseaseDetector";
+import CropPrediction from "./CropPrediction";
 import Settings from "./Settings";
 import FloatingChatbot from "./FloatingChatbot";
 
-const Layout = () => {
+const Layout = ({ farmerData, onLogout }) => {
   const [activeItem, setActiveItem] = useState("dashboard");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [language, setLanguage] = useState("en");
@@ -27,6 +28,8 @@ const Layout = () => {
     switch (activeItem) {
       case "dashboard":
         return <Dashboard language={language} />;
+      case "crops":
+        return <CropPrediction language={language} />;
       case "reports":
         return <Schemes language={language} />;
       case "analytics":
@@ -38,7 +41,7 @@ const Layout = () => {
       case "inventory":
         return <InventoryManagement language={language} />;
       case "settings":
-        return <Settings language={language} />;
+        return <Settings language={language} farmerData={farmerData} />;
       default:
         return (
           <div className="p-6 bg-gray-50 min-h-screen">
@@ -78,6 +81,8 @@ const Layout = () => {
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           language={language}
           toggleLanguage={toggleLanguage}
+          farmerData={farmerData}
+          onLogout={onLogout}
         />
         <div className="flex-1 overflow-y-auto">{renderContent()}</div>
       </div>

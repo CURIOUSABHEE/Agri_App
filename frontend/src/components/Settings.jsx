@@ -4,26 +4,48 @@ import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { Label } from "./ui/Label";
 
-const Settings = ({ language = "en" }) => {
+const Settings = ({ language = "en", farmerData: propFarmerData }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  // Initialize farmer data from props or defaults
   const [farmerData, setFarmerData] = useState({
-    name: "Rajesh Nair",
-    phone: "+91 9876543210",
-    email: "rajesh.nair@gmail.com",
-    state: "Kerala",
-    district: "Kollam",
-    taluka: "Kollam",
-    village: "Parippally",
-    pincode: "691574",
+    name: propFarmerData?.name || "Farmer",
+    phone: propFarmerData?.phone || "",
+    email: propFarmerData?.email || "",
+    state: "Kerala", // Default to Kerala as it's an agricultural state
+    district: propFarmerData?.district || "",
+    taluka: "",
+    village: "",
+    pincode: "",
     farmSize: "2.5",
     farmSizeUnit: "acres",
     soilType: "Laterite",
-    irrigationType: "Bore well",
-    currentSeason: "Rabi",
-    farmingExperience: "15",
-    mainCrops: ["Rice", "Coconut", "Pepper"],
+    irrigationType: "Rain-fed",
+    currentSeason: "Kharif",
+    farmingExperience: "5",
+    mainCrops: ["Rice", "Coconut"],
+    farmer_id: propFarmerData?.farmer_id,
+    language: propFarmerData?.language || language,
+    registration_date: propFarmerData?.registration_date,
   });
+
+  // Update farmer data when prop changes
+  React.useEffect(() => {
+    if (propFarmerData) {
+      setFarmerData((prev) => ({
+        ...prev,
+        name: propFarmerData.name || prev.name,
+        phone: propFarmerData.phone || prev.phone,
+        district: propFarmerData.district || prev.district,
+        farmer_id: propFarmerData.farmer_id,
+        language: propFarmerData.language || language,
+        registration_date: propFarmerData.registration_date,
+      }));
+    }
+  }, [propFarmerData, language]);
 
   const [editData, setEditData] = useState({ ...farmerData });
 
@@ -366,11 +388,73 @@ const Settings = ({ language = "en" }) => {
     }));
   };
 
-  const handleSave = () => {
-    setFarmerData({ ...editData });
-    setIsEditing(false);
-    // Here you would typically save to backend API
-    alert(t.profileUpdated);
+  const handleSave = async () => {
+    setLoading(true);
+    setSaveMessage("");
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setSaveMessage("❌ Please login first");
+        setLoading(false);
+        return;
+      }
+
+      // Update profile via API
+      const response = await fetch("http://localhost:8000/api/auth/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: editData.name,
+          email: editData.email,
+          district: editData.district,
+          village: editData.village,
+          state: editData.state,
+          taluka: editData.taluka,
+          pincode: editData.pincode,
+          farm_size: editData.farmSize,
+          farm_size_unit: editData.farmSizeUnit,
+          soil_type: editData.soilType,
+          irrigation_type: editData.irrigationType,
+          current_season: editData.currentSeason,
+          farming_experience: editData.farmingExperience,
+          main_crops: editData.mainCrops,
+        }),
+      });
+
+      if (response.ok) {
+        await response.json(); // Response processed successfully
+        setFarmerData({ ...editData });
+        setIsEditing(false);
+        setSaveMessage("✅ " + t.profileUpdated);
+
+        // Update localStorage with new data
+        const storedData = localStorage.getItem("farmerData");
+        if (storedData) {
+          const parsed = JSON.parse(storedData);
+          localStorage.setItem(
+            "farmerData",
+            JSON.stringify({
+              ...parsed,
+              name: editData.name,
+              district: editData.district,
+            })
+          );
+        }
+      } else {
+        const errorData = await response.json();
+        setSaveMessage(
+          "❌ Failed to update: " + (errorData.detail || "Unknown error")
+        );
+      }
+    } catch (error) {
+      setSaveMessage("❌ Network error: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -383,7 +467,14 @@ const Settings = ({ language = "en" }) => {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-800">{t.title}</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">{t.title}</h1>
+            {farmerData.farmer_id && (
+              <p className="text-sm text-gray-500 mt-1">
+                Farmer ID: {farmerData.farmer_id}
+              </p>
+            )}
+          </div>
           {!isEditing ? (
             <Button
               onClick={() => setIsEditing(true)}
@@ -395,19 +486,34 @@ const Settings = ({ language = "en" }) => {
             <div className="flex space-x-3">
               <Button
                 onClick={handleSave}
-                className="px-6 py-2 text-white bg-green-500 hover:bg-green-600"
+                disabled={loading}
+                className="px-6 py-2 text-white bg-green-500 hover:bg-green-600 disabled:opacity-50"
               >
-                ✅ {t.saveChanges}
+                {loading ? "⏳ Saving..." : "✅ " + t.saveChanges}
               </Button>
               <Button
                 onClick={handleCancel}
-                className="px-6 py-2 text-white bg-gray-500 hover:bg-gray-600"
+                disabled={loading}
+                className="px-6 py-2 text-white bg-gray-500 hover:bg-gray-600 disabled:opacity-50"
               >
                 ❌ {t.cancelEdit}
               </Button>
             </div>
           )}
         </div>
+
+        {/* Save Message */}
+        {saveMessage && (
+          <div
+            className={`p-4 rounded-lg ${
+              saveMessage.startsWith("✅")
+                ? "bg-green-100 border border-green-400 text-green-700"
+                : "bg-red-100 border border-red-400 text-red-700"
+            }`}
+          >
+            {saveMessage}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-6">
           {/* Personal Information */}
@@ -460,8 +566,26 @@ const Settings = ({ language = "en" }) => {
                 </h3>
                 <p className="text-gray-600">{t.farmer}</p>
                 <p className="text-sm text-gray-500">
-                  {farmerData.district}, {farmerData.state}
+                  {farmerData.district || "District"}, {farmerData.state}
                 </p>
+                {farmerData.registration_date && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Member since:{" "}
+                    {new Date(
+                      farmerData.registration_date
+                    ).toLocaleDateString()}
+                  </p>
+                )}
+                <div className="flex items-center space-x-2 mt-1">
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    Language: {farmerData.language?.toUpperCase() || "EN"}
+                  </span>
+                  {farmerData.phone && (
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                      Verified
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -484,14 +608,25 @@ const Settings = ({ language = "en" }) => {
               <div>
                 <Label>{t.phone}</Label>
                 {isEditing ? (
-                  <Input
-                    value={editData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    className="mt-1"
-                  />
+                  <div>
+                    <Input
+                      value={editData.phone}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
+                      className="mt-1 bg-gray-100"
+                      disabled
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Phone number cannot be changed after registration
+                    </p>
+                  </div>
                 ) : (
                   <p className="mt-1 text-gray-700 font-medium">
                     {farmerData.phone}
+                    <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                      Verified
+                    </span>
                   </p>
                 )}
               </div>
