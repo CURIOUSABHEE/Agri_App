@@ -1,7 +1,7 @@
 """
 Crop Prediction Service
 Provides recommendations for optimal crops based on various factors
-Enhanced with real-time weather and market data integration
+Enhanced with real-time weather, market data, and soil data integration
 """
 
 import logging
@@ -10,6 +10,7 @@ from datetime import datetime
 from services.weather_service import WeatherService
 from services.kerala_market_service import KeralaMarketService
 from services.market_price_service import MarketPriceService
+from services.soil_data_service import soil_data_service
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class CropPredictionService:
         self.weather_service = WeatherService()
         self.kerala_market_service = KeralaMarketService()
         self.market_price_service = MarketPriceService()
+        self.soil_data_service = soil_data_service
         
         # Sample crop database with growing conditions
         self.crops_database = {
@@ -259,6 +261,253 @@ class CropPredictionService:
             logger.error(f"Error fetching market prices: {e}")
             return {}
     
+    async def get_real_time_soil_data(self, state: str, district: Optional[str] = None) -> Dict[str, Any]:
+        """Fetch real-time soil data for enhanced prediction"""
+        try:
+            logger.info(f"Fetching soil data for {state}, {district}")
+            
+            # Get soil analysis from data.gov.in
+            soil_response = await self.soil_data_service.get_soil_data_for_location(
+                state=state, 
+                district=district
+            )
+            
+            if soil_response["success"]:
+                logger.info("Successfully fetched real-time soil data")
+                return {
+                    "available": True,
+                    "analysis": soil_response["soil_analysis"],
+                    "location": soil_response["location"],
+                    "source": "data.gov.in",
+                    "fetched_at": soil_response["fetched_at"]
+                }
+            else:
+                logger.warning(f"Soil data not available: {soil_response.get('error', 'Unknown error')}")
+                return {
+                    "available": False,
+                    "error": soil_response.get("error", "Soil data not available")
+                }
+                
+        except Exception as e:
+            logger.error(f"Error fetching soil data: {e}")
+            return {
+                "available": False,
+                "error": str(e)
+            }
+    
+    async def predict_crops_async(
+        self,
+        soil_type: str,
+        season: str,
+        state: str,
+        ph_level: Optional[float] = None,
+        water_availability: str = "medium",
+        experience_level: str = "intermediate",
+        farm_size: str = "small",
+        use_real_time_data: bool = True,
+        district: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Async version of predict_crops with soil data integration
+        """
+        try:
+            suitable_crops = []
+            
+            # Normalize inputs
+            soil_type = soil_type.lower()
+            season = season.lower()
+            state = state.title()
+            water_availability = water_availability.lower()
+            
+            # Fetch real-time data if enabled
+            weather_data = None
+            current_prices = {}
+            soil_data = None
+            
+            if use_real_time_data:
+                try:
+                    # Fetch weather data
+                    weather_data = await self.get_real_time_weather_data(state)
+                    
+                    # Fetch soil data
+                    soil_data = await self.get_real_time_soil_data(state, district)
+                    
+                    # Get crop names for price lookup
+                    crop_names = [self.crop_market_mappings.get(crop_key) for crop_key in self.crops_database.keys()]
+                    crop_names = [name for name in crop_names if name]  # Remove None values
+                    
+                    # Fetch current market prices
+                    current_prices = await self.get_current_market_prices(crop_names, state)
+                    
+                except Exception as e:
+                    logger.warning(f"Error fetching real-time data: {e}")
+            
+            # Use soil data for enhanced predictions if available
+            if soil_data and soil_data["available"]:
+                analysis = soil_data["analysis"]
+                
+                # Override pH if soil data provides it
+                if analysis.get("average_ph") and not ph_level:
+                    ph_level = analysis["average_ph"]
+                    logger.info(f"Using soil data pH: {ph_level}")
+                
+                # Override soil type if soil data provides it
+                if analysis.get("dominant_soil_type"):
+                    detected_soil = analysis["dominant_soil_type"].lower()
+                    logger.info(f"Soil data suggests dominant soil type: {detected_soil}")
+                    # You could override the user input here if desired
+                    # soil_type = detected_soil
+            
+            # Evaluate each crop
+            for crop_key, crop_data in self.crops_database.items():
+                score = 0
+                reasons = []
+                
+                # Check soil type compatibility
+                if soil_type in [s.lower() for s in crop_data["soil_types"]]:
+                    score += 25
+                    reasons.append(f"Suitable for {soil_type} soil")
+                
+                # Check seasonal compatibility
+                crop_seasons = [s.lower() for s in crop_data["season"]]
+                if season in crop_seasons or "year_round" in crop_seasons:
+                    score += 25
+                    reasons.append(f"Suitable for {season} season")
+                
+                # Check state suitability
+                if state in crop_data["states_suitable"]:
+                    score += 25
+                    reasons.append(f"Suitable for {state}")
+                
+                # pH compatibility check
+                if ph_level is not None:
+                    ph_min, ph_max = crop_data["ph_range"]
+                    if ph_min <= ph_level <= ph_max:
+                        score += 10
+                        reasons.append(f"pH {ph_level} is suitable")
+                    else:
+                        score -= 5
+                        reasons.append(f"pH {ph_level} is not optimal (needs {ph_min}-{ph_max})")
+                
+                # Water availability check
+                water_req = crop_data["water_requirement"].lower()
+                water_score = self._calculate_water_score(water_availability, water_req)
+                score += water_score
+                if water_score > 0:
+                    reasons.append("Water requirement matches availability")
+                
+                # Experience level adjustment
+                if experience_level == "beginner" and crop_key in ["wheat", "rice", "tomato"]:
+                    score += 5
+                    reasons.append("Good crop for beginners")
+                elif experience_level == "expert" and crop_key in ["cotton", "sugarcane"]:
+                    score += 5
+                    reasons.append("Suitable for experienced farmers")
+                
+                # Farm size consideration
+                if farm_size == "small" and crop_key in ["tomato", "onion", "potato"]:
+                    score += 3
+                    reasons.append("Suitable for small farms")
+                elif farm_size == "large" and crop_key in ["sugarcane", "cotton", "wheat"]:
+                    score += 3
+                    reasons.append("Suitable for large-scale farming")
+                
+                # Weather integration
+                weather_suitability = None
+                current_temperature = None
+                if weather_data and weather_data.get("temperature"):
+                    temp = weather_data["temperature"]
+                    current_temperature = f"{temp}°C"
+                    temp_min, temp_max = crop_data["temperature_range"]
+                    
+                    if temp_min <= temp <= temp_max:
+                        score += 10
+                        weather_suitability = "Ideal"
+                        reasons.append(f"Current temperature ({temp}°C) is ideal")
+                    elif temp_min - 5 <= temp <= temp_max + 5:
+                        score += 5
+                        weather_suitability = "Good"
+                        reasons.append(f"Current temperature ({temp}°C) is acceptable")
+                    else:
+                        weather_suitability = "Poor"
+                        reasons.append(f"Current temperature ({temp}°C) is not suitable")
+                
+                # Market price integration
+                current_price = None
+                price_status = "Historical"
+                if crop_key in self.crop_market_mappings:
+                    market_name = self.crop_market_mappings[crop_key]
+                    if market_name in current_prices:
+                        current_price = current_prices[market_name]
+                        price_status = "Current"
+                        score += 5
+                        reasons.append("Current market price available")
+                
+                # Only include crops with reasonable scores
+                if score >= 50:
+                    suitable_crops.append({
+                        "crop_name": crop_data["name"],
+                        "crop_key": crop_key,
+                        "suitability_score": min(score, 100),
+                        "suitability_percentage": min(score, 100),
+                        "recommendation_level": self._get_recommendation_level(min(score, 100)),
+                        "reasons": reasons,
+                        "details": {
+                            **crop_data,
+                            "current_market_price": current_price or crop_data["market_price_range"],
+                            "price_status": price_status,
+                            "weather_suitability": weather_suitability,
+                            "current_temperature": current_temperature
+                        }
+                    })
+            
+            # Sort by suitability score
+            suitable_crops.sort(key=lambda x: x["suitability_score"], reverse=True)
+            
+            # Generate summary
+            if suitable_crops:
+                top_crop = suitable_crops[0]
+                summary = f"Based on {soil_type} soil and {season} season in {state}, {top_crop['crop_name']} is the top recommendation with {top_crop['suitability_percentage']}% suitability. Found {len(suitable_crops)} suitable crops total."
+            else:
+                summary = f"No highly suitable crops found for {soil_type} soil in {season} season for {state}. Consider adjusting growing conditions or consulting local experts."
+            
+            # Generate farming tips
+            farming_tips = self._generate_farming_tips(suitable_crops, soil_type, season, state, ph_level, soil_data)
+            
+            return {
+                "success": True,
+                "prediction_date": datetime.now().isoformat(),
+                "input_parameters": {
+                    "soil_type": soil_type,
+                    "season": season,
+                    "state": state,
+                    "ph_level": ph_level,
+                    "water_availability": water_availability,
+                    "experience_level": experience_level,
+                    "farm_size": farm_size
+                },
+                "predicted_crops": suitable_crops,
+                "total_suitable_crops": len(suitable_crops),
+                "summary": summary,
+                "farming_tips": farming_tips,
+                "real_time_data": {
+                    "weather_integrated": weather_data is not None,
+                    "market_prices_integrated": len(current_prices) > 0,
+                    "soil_data_integrated": soil_data and soil_data["available"],
+                    "current_weather": weather_data,
+                    "available_market_prices": len(current_prices),
+                    "soil_analysis": soil_data if soil_data and soil_data["available"] else None
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in crop prediction: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "predicted_crops": []
+            }
+    
     def predict_crops(
         self,
         soil_type: str,
@@ -475,6 +724,40 @@ class CropPredictionService:
         else:
             return "Consider with Caution"
     
+    def _calculate_water_score(self, water_availability: str, water_requirement: str) -> int:
+        """Calculate compatibility score between water availability and requirement"""
+        try:
+            # Define water level mappings
+            water_levels = {
+                "low": 1,
+                "medium": 2,
+                "high": 3,
+                "very_high": 4
+            }
+            
+            avail_level = water_levels.get(water_availability.lower(), 2)  # Default to medium
+            req_level = water_levels.get(water_requirement.lower(), 2)    # Default to medium
+            
+            # Calculate compatibility
+            if avail_level >= req_level:
+                # Perfect match or excess water
+                if avail_level == req_level:
+                    return 15  # Perfect match
+                elif avail_level == req_level + 1:
+                    return 10  # Slight excess, still good
+                else:
+                    return 5   # Too much water might not be ideal
+            else:
+                # Insufficient water
+                deficit = req_level - avail_level
+                if deficit == 1:
+                    return -5  # Minor shortage
+                else:
+                    return -10 # Major shortage
+        except Exception as e:
+            logger.warning(f"Error calculating water score: {e}")
+            return 0
+    
     def _generate_prediction_summary(self, crops: List[Dict], season: str, soil_type: str, state: str, weather_data: Optional[Dict] = None) -> str:
         """Generate a summary of the prediction with real-time context"""
         if not crops:
@@ -496,67 +779,89 @@ class CropPredictionService:
         
         return f"Based on {soil_type} soil and {season} season in {state}, {top_crop} is the top recommendation with {suitability}% suitability.{weather_context} Found {crop_count} suitable crops total."
     
-    def _generate_farming_tips(self, top_crops: List[Dict], experience: str, farm_size: str, weather_data: Optional[Dict] = None, current_prices: Optional[Dict] = None) -> List[str]:
-        """Generate contextual farming tips with real-time insights"""
+    def _generate_farming_tips(self, top_crops: List[Dict], soil_type: str, season: str, state: str, ph_level: Optional[float] = None, soil_data: Optional[Dict] = None) -> List[str]:
+        """Generate contextual farming tips with real-time insights including soil data"""
         tips = []
         
-        # Weather-based tips
-        if weather_data:
-            temp = weather_data.get("temperature", 0)
-            humidity = weather_data.get("humidity", 0)
+        # Soil data based tips
+        if soil_data and soil_data.get("available"):
+            analysis = soil_data["analysis"]
             
-            if temp > 30:
-                tips.append("🌡️ High temperature detected - ensure adequate irrigation and consider shade protection")
-            elif temp < 15:
-                tips.append("❄️ Cool weather - protect crops from frost and consider greenhouse cultivation")
+            # pH recommendations
+            if analysis.get("average_ph"):
+                ph = analysis["average_ph"]
+                ph_class = analysis.get("ph_classification", "")
+                if ph_class == "Acidic":
+                    tips.append(f"🧪 Soil is acidic (pH {ph}) - consider lime application to increase pH for better crop growth")
+                elif ph_class == "Alkaline":
+                    tips.append(f"🧪 Soil is alkaline (pH {ph}) - consider sulfur application to decrease pH")
+                else:
+                    tips.append(f"🧪 Soil pH ({ph}) is optimal for most crops")
             
-            if humidity > 80:
-                tips.append("💧 High humidity - watch for fungal diseases and ensure good drainage")
-            elif humidity < 40:
-                tips.append("🏜️ Low humidity - increase watering frequency and consider mulching")
-        
-        # Market price based tips
-        if current_prices and top_crops:
-            high_price_crops = []
-            for crop in top_crops[:3]:
-                crop_key = crop["crop_key"]
-                if current_prices.get(crop_key):
-                    high_price_crops.append(f"{crop['crop_name']} (₹{current_prices[crop_key]:.0f}/quintal)")
+            # Nutrient recommendations
+            fertility = analysis.get("fertility_status", {})
+            for nutrient, data in fertility.items():
+                status = data.get("status", "").lower()
+                if status == "low":
+                    nutrient_tips = {
+                        "nitrogen": "Apply nitrogen-rich fertilizers like urea or compost",
+                        "phosphorus": "Apply phosphate fertilizers or bone meal",
+                        "potassium": "Apply potash or wood ash",
+                        "organic_carbon": "Add organic matter like compost or farmyard manure"
+                    }
+                    if nutrient in nutrient_tips:
+                        tips.append(f"🌱 {nutrient.title()} is low - {nutrient_tips[nutrient]}")
             
-            if high_price_crops:
-                tips.append(f"💰 Current high-value crops: {', '.join(high_price_crops)}")
+            # Soil-based crop suggestions
+            soil_suggestions = analysis.get("crop_suitability", [])
+            if soil_suggestions:
+                tips.append(f"🌾 Soil analysis suggests these crops: {', '.join(soil_suggestions[:3])}")
         
-        # Experience-based tips
-        if experience == "beginner":
-            tips.append("🌱 Start with crops that have shorter growth periods and are less pest-prone")
-            tips.append("📚 Consider taking local agriculture training programs")
-        elif experience == "expert":
-            tips.append("🔬 Consider advanced techniques like precision farming and soil sensors")
-            tips.append("📈 Explore value-added processing for higher margins")
-        
-        # Farm size tips
-        if farm_size == "small":
-            tips.append("💰 Focus on high-value crops with good market demand")
-            tips.append("🔄 Consider crop rotation to maintain soil health")
-        elif farm_size == "large":
-            tips.append("🚜 Consider mechanization for better efficiency")
-            tips.append("📊 Diversify crops to reduce market risks")
-        
-        # Crop-specific tips
+        # Standard farming tips based on top crops
         if top_crops:
-            first_crop = top_crops[0]["details"]
-            tips.append(f"💧 {first_crop['name']} requires {first_crop['water_requirement']} water - plan irrigation accordingly")
-            tips.append(f"⏱️ Growth period is {first_crop['growth_period_days']} days - plan your calendar")
+            top_crop = top_crops[0]
+            tips.append(f"💰 Focus on high-value crops with good market demand")
+            tips.append(f"🔄 Consider crop rotation to maintain soil health")
+            
+            # Crop-specific tips
+            if top_crop["crop_key"] == "banana":
+                tips.append("💧 Banana requires high water - plan irrigation accordingly")
+                tips.append("⏱️ Growth period is 300 days - plan your calendar")
+            elif top_crop["crop_key"] == "rice":
+                tips.append("💧 Rice needs standing water - ensure proper field preparation")
+                tips.append("🌾 Consider System of Rice Intensification (SRI) for better yields")
+            elif top_crop["crop_key"] == "cotton":
+                tips.append("🐛 Monitor for bollworm and other pests regularly")
+                tips.append("💧 Cotton needs consistent moisture during flowering")
+            elif top_crop["crop_key"] == "sugarcane":
+                tips.append("⏰ Sugarcane is a long-duration crop (12-18 months)")
+                tips.append("💧 Requires high water throughout growth period")
         
-        # General tips
-        tips.append("🌡️ Monitor weather forecasts regularly for timely decisions")
-        tips.append("🔬 Test soil health before planting for optimal results")
+        # Seasonal tips
+        season_tips = {
+            "kharif": "🌧️ Monsoon season - ensure proper drainage to prevent waterlogging",
+            "rabi": "❄️ Winter season - protect crops from frost and cold winds",
+            "summer": "☀️ Summer season - focus on water management and heat protection",
+            "monsoon": "🌧️ High rainfall expected - choose flood-resistant varieties"
+        }
+        if season in season_tips:
+            tips.append(season_tips[season])
         
-        # Real-time data availability tip
-        if weather_data or current_prices:
-            tips.append("📊 This prediction uses real-time data for enhanced accuracy")
+        # General agricultural tips
+        tips.extend([
+            "🌡️ Monitor weather forecasts regularly for timely decisions",
+            "🔬 Test soil health before planting for optimal results"
+        ])
         
-        return tips
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_tips = []
+        for tip in tips:
+            if tip not in seen:
+                seen.add(tip)
+                unique_tips.append(tip)
+        
+        return unique_tips[:6]  # Limit to 6 tips
 
     def get_crop_details(self, crop_key: str) -> Dict[str, Any]:
         """Get detailed information about a specific crop"""

@@ -14,43 +14,7 @@ class InventoryService:
     def __init__(self):
         # In-memory storage for demonstration (replace with database in production)
         self.inventory_items = []
-        self._seed_sample_data()
-    
-    def _seed_sample_data(self):
-        """Seed some sample inventory data"""
-        sample_items = [
-            {
-                "id": str(uuid.uuid4()),
-                "name": "Fertilizer - NPK 10:26:26",
-                "category": "fertilizer",
-                "quantity": 50,
-                "unit": "bags",
-                "price": 850.0,
-                "supplier": "Agro Chemicals Ltd",
-                "expiry_date": "2024-12-31",
-                "location": "Warehouse A",
-                "minimum_stock": 10,
-                "created_at": datetime.now(),
-                "updated_at": datetime.now()
-            },
-            {
-                "id": str(uuid.uuid4()),
-                "name": "Seeds - Tomato Hybrid",
-                "category": "seeds",
-                "quantity": 25,
-                "unit": "packets",
-                "price": 120.0,
-                "supplier": "Green Seeds Co",
-                "expiry_date": "2025-03-15",
-                "location": "Cold Storage",
-                "minimum_stock": 5,
-                "created_at": datetime.now(),
-                "updated_at": datetime.now()
-            }
-        ]
-        
-        for item_data in sample_items:
-            self.inventory_items.append(InventoryItem(**item_data))
+        # Start with completely empty inventory - fully dynamic
     
     async def get_items(self, category: Optional[str] = None, low_stock: Optional[bool] = None, sort_by: Optional[str] = "name") -> List[InventoryItem]:
         """Get inventory items with optional filters and sorting"""
@@ -194,58 +158,13 @@ class InventoryService:
     async def get_transactions(self, item_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """Get transaction history"""
         try:
-            # For demo purposes, return mock transaction data
-            # In production, this would fetch from a transactions database table
+            # Return empty transactions list - completely dynamic
+            # Transactions will be populated when users actually add/remove inventory items
             transactions = []
             
-            if item_id:
-                # Get transactions for specific item
-                item = next((item for item in self.inventory_items if item.id == item_id), None)
-                if item:
-                    transactions = [
-                        {
-                            "id": str(uuid.uuid4()),
-                            "item_id": item.id,
-                            "item_name": item.name,
-                            "type": "purchase",
-                            "quantity": 10,
-                            "unit_price": item.price,
-                            "total_amount": 10 * item.price,
-                            "timestamp": datetime.now().replace(day=1),
-                            "description": f"Initial stock purchase of {item.name}"
-                        },
-                        {
-                            "id": str(uuid.uuid4()),
-                            "item_id": item.id,
-                            "item_name": item.name,
-                            "type": "usage",
-                            "quantity": -2,
-                            "unit_price": item.price,
-                            "total_amount": -2 * item.price,
-                            "timestamp": datetime.now().replace(day=15),
-                            "description": f"Used {item.name} for farming activities"
-                        }
-                    ]
-            else:
-                # Get recent transactions for all items
-                for item in self.inventory_items[:limit]:
-                    transactions.extend([
-                        {
-                            "id": str(uuid.uuid4()),
-                            "item_id": item.id,
-                            "item_name": item.name,
-                            "type": "purchase",
-                            "quantity": item.quantity // 2,
-                            "unit_price": item.price,
-                            "total_amount": (item.quantity // 2) * item.price,
-                            "timestamp": datetime.now().replace(day=1),
-                            "description": f"Stock purchase of {item.name}"
-                        }
-                    ])
-            
-            # Sort by timestamp (most recent first) and limit results
-            transactions.sort(key=lambda x: x["timestamp"], reverse=True)
-            return transactions[:limit]
+            # In production, this would fetch from a transactions database table
+            # For now, return empty list to make inventory completely dynamic
+            return transactions
             
         except Exception as e:
             logger.error(f"Error getting transactions: {e}")

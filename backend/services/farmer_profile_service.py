@@ -13,38 +13,37 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 import json
 
-from .auth_service import verify_token
-from ..database.mongodb_setup import get_database
+from services.auth_service import verify_token
+from database.mongodb_setup import get_database
 
 router = APIRouter(prefix="/api/farmer", tags=["Farmer Profile"])
 
 # Pydantic Models for Farmer Data
 class Address(BaseModel):
-    village: Optional[str] = None
     district: str
     state: str = "Kerala"
-    pincode: Optional[str] = Field(None, regex=r"^\d{6}$")
+    pincode: Optional[str] = Field(None, pattern=r"^\d{6}$")
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
 
 class PersonalDetailsUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=100)
-    email: Optional[str] = Field(None, regex=r"^[\w\.-]+@[\w\.-]+\.\w+$")
+    email: Optional[str] = Field(None, pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$")
     date_of_birth: Optional[datetime] = None
-    gender: Optional[str] = Field(None, regex=r"^(male|female|other)$")
-    language_preference: Optional[str] = Field(None, regex=r"^(en|hi|ml|ta|te|kn)$")
+    gender: Optional[str] = Field(None, pattern=r"^(male|female|other)$")
+    language_preference: Optional[str] = Field(None, pattern=r"^(en|hi|ml|ta|te|kn)$")
     education_level: Optional[str] = None
     family_size: Optional[int] = Field(None, ge=1, le=20)
     address: Optional[Address] = None
-    aadhar_number: Optional[str] = Field(None, regex=r"^\d{12}$")
+    aadhar_number: Optional[str] = Field(None, pattern=r"^\d{12}$")
     bank_account: Optional[Dict[str, str]] = None
 
 class FarmCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     area_acres: float = Field(..., gt=0, le=1000)
-    soil_type: str = Field(..., regex=r"^(clay|loamy|sandy|laterite|alluvial|black_cotton)$")
+    soil_type: str = Field(..., pattern=r"^(clay|loamy|sandy|laterite|alluvial|black_cotton)$")
     soil_ph: Optional[float] = Field(None, ge=0, le=14)
-    irrigation_type: str = Field(..., regex=r"^(drip|sprinkler|flood|monsoon_dependent|borwell|canal)$")
+    irrigation_type: str = Field(..., pattern=r"^(drip|sprinkler|flood|monsoon_dependent|borwell|canal)$")
     water_source: List[str] = []
     current_crops: List[str] = []
     address: Address
@@ -57,9 +56,9 @@ class FarmCreate(BaseModel):
 class FarmUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     area_acres: Optional[float] = Field(None, gt=0, le=1000)
-    soil_type: Optional[str] = Field(None, regex=r"^(clay|loamy|sandy|laterite|alluvial|black_cotton)$")
+    soil_type: Optional[str] = Field(None, pattern=r"^(clay|loamy|sandy|laterite|alluvial|black_cotton)$")
     soil_ph: Optional[float] = Field(None, ge=0, le=14)
-    irrigation_type: Optional[str] = Field(None, regex=r"^(drip|sprinkler|flood|monsoon_dependent|borwell|canal)$")
+    irrigation_type: Optional[str] = Field(None, pattern=r"^(drip|sprinkler|flood|monsoon_dependent|borwell|canal)$")
     water_source: Optional[List[str]] = None
     current_crops: Optional[List[str]] = None
     storage_facilities: Optional[List[str]] = None

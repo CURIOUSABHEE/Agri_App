@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
-import GoogleSignIn from "./GoogleSignIn";
+import PasskeyAuth from "./PasskeyAuth";
 
 const Authentication = ({ onLogin, language = "en" }) => {
   const [step, setStep] = useState("phone"); // 'phone' or 'otp'
@@ -20,6 +20,8 @@ const Authentication = ({ onLogin, language = "en" }) => {
   const [otp, setOtp] = useState("");
   const [farmerName, setFarmerName] = useState("");
   const [district, setDistrict] = useState("");
+  const [farmSize, setFarmSize] = useState("");
+  const [farmSizeUnit, setFarmSizeUnit] = useState("acres");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -35,6 +37,11 @@ const Authentication = ({ onLogin, language = "en" }) => {
       namePlaceholder: "Enter your name",
       district: "District",
       districtPlaceholder: "Select your district",
+      farmSize: "Farm Size",
+      farmSizePlaceholder: "Enter farm area",
+      farmSizeUnit: "Unit",
+      acres: "Acres",
+      hectares: "Hectares",
       sendOtp: "Send OTP",
       otp: "Enter OTP",
       otpPlaceholder: "6-digit OTP",
@@ -183,6 +190,15 @@ const Authentication = ({ onLogin, language = "en" }) => {
     setError("");
 
     try {
+      // Create farms array if farm size is provided
+      const farms = [];
+      if (farmSize && parseFloat(farmSize) > 0) {
+        farms.push({
+          size: farmSize,
+          unit: farmSizeUnit,
+        });
+      }
+
       const response = await fetch(
         "http://localhost:8000/api/auth/verify-otp",
         {
@@ -196,6 +212,7 @@ const Authentication = ({ onLogin, language = "en" }) => {
             farmer_name: farmerName,
             district,
             language,
+            farms: farms,
           }),
         }
       );
@@ -225,51 +242,25 @@ const Authentication = ({ onLogin, language = "en" }) => {
     setError("");
     setOtpSent(false);
     setDevOtp("");
+    // Reset farm size fields when going back
+    setFarmSize("");
+    setFarmSizeUnit("acres");
   };
 
-  const handleGoogleLogin = async (googleUserData) => {
-    setLoading(true);
-    setError("");
-
+  const handlePasskeyLogin = async (passkeyData) => {
     try {
-      // Send Google user data to your backend for authentication
-      const response = await fetch(
-        "http://localhost:8000/api/auth/google-login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: googleUserData.email,
-            name: googleUserData.name,
-            picture: googleUserData.picture,
-            google_id: googleUserData.google_id,
-            email_verified: googleUserData.email_verified,
-            given_name: googleUserData.given_name,
-            family_name: googleUserData.family_name,
-            language: language,
-          }),
-        }
+      // Save authentication data
+      localStorage.setItem("authToken", passkeyData.access_token);
+      localStorage.setItem(
+        "farmerData",
+        JSON.stringify(passkeyData.farmer_data)
       );
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Save authentication data
-        localStorage.setItem("authToken", data.access_token);
-        localStorage.setItem("farmerData", JSON.stringify(data.farmer_data));
-
-        // Call parent login handler
-        onLogin(data);
-      } else {
-        setError(data.detail || "Google Sign-In failed");
-      }
+      // Call parent login handler
+      onLogin(passkeyData);
     } catch (error) {
-      setError("Network error. Please check if the server is running.");
-      console.error("Google login error:", error);
-    } finally {
-      setLoading(false);
+      console.error("Passkey login error:", error);
+      setError("Passkey authentication failed. Please try again.");
     }
   };
 
@@ -336,6 +327,31 @@ const Authentication = ({ onLogin, language = "en" }) => {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.farmSize} (Optional)
+                </label>
+                <div className="flex space-x-2">
+                  <Input
+                    type="number"
+                    value={farmSize}
+                    onChange={(e) => setFarmSize(e.target.value)}
+                    placeholder={t.farmSizePlaceholder}
+                    className="flex-1"
+                    min="0"
+                    step="0.1"
+                  />
+                  <select
+                    value={farmSizeUnit}
+                    onChange={(e) => setFarmSizeUnit(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="acres">{t.acres}</option>
+                    <option value="hectares">{t.hectares}</option>
+                  </select>
+                </div>
+              </div>
+
               <Button
                 onClick={sendOTP}
                 disabled={loading || !phone}
@@ -360,9 +376,9 @@ const Authentication = ({ onLogin, language = "en" }) => {
                 </div>
               </div>
 
-              {/* Google Sign-In Button */}
-              <GoogleSignIn
-                onGoogleLogin={handleGoogleLogin}
+              {/* Passkey Authentication */}
+              <PasskeyAuth
+                onPasskeyLogin={handlePasskeyLogin}
                 language={language}
               />
             </div>

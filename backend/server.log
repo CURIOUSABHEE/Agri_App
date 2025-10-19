@@ -1,0 +1,20 @@
+/Users/apple/Desktop/Agri_App/backend/main.py:140: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+/Users/apple/Desktop/Agri_App/backend/main.py:162: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("shutdown")
+INFO:     Will watch for changes in these directories: ['/Users/apple/Desktop/Agri_App/backend']
+ERROR:    [Errno 48] Address already in use
+✅ Loaded 5 farmers from backup
+🌾 Starting Agricultural Platform API...
+📡 Server will run on http://0.0.0.0:8000
+📚 Documentation available at http://0.0.0.0:8000/docs

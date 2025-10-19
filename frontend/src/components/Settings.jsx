@@ -3,49 +3,113 @@ import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { Label } from "./ui/Label";
+import PasskeySetup from "./PasskeySetup";
+import PasskeyManagement from "./PasskeyManagement";
+import {
+  FARMING_EXPERIENCE_OPTIONS,
+  SEASON_OPTIONS,
+  SOIL_TYPE_OPTIONS,
+  FARM_SIZE_OPTIONS,
+  IRRIGATION_TYPE_OPTIONS,
+  FARM_SIZE_UNITS,
+} from "../constants/agriculturalOptions";
 
-const Settings = ({ language = "en", farmerData: propFarmerData }) => {
+const Settings = ({ language = "en" }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
-  // Initialize farmer data from props or defaults
+  // Initialize farmer data - start with empty/loading state
   const [farmerData, setFarmerData] = useState({
-    name: propFarmerData?.name || "Farmer",
-    phone: propFarmerData?.phone || "",
-    email: propFarmerData?.email || "",
-    state: "Kerala", // Default to Kerala as it's an agricultural state
-    district: propFarmerData?.district || "",
+    name: "",
+    phone: "",
+    state: "",
+    district: "",
     taluka: "",
     village: "",
     pincode: "",
-    farmSize: "2.5",
+    farmSize: "",
     farmSizeUnit: "acres",
-    soilType: "Laterite",
-    irrigationType: "Rain-fed",
-    currentSeason: "Kharif",
-    farmingExperience: "5",
-    mainCrops: ["Rice", "Coconut"],
-    farmer_id: propFarmerData?.farmer_id,
-    language: propFarmerData?.language || language,
-    registration_date: propFarmerData?.registration_date,
+    farmCategory: "",
+    soilType: "",
+    irrigationType: "",
+    currentSeason: "",
+    farmingExperience: "",
+    mainCrops: [],
+    farmer_id: "",
+    language: language,
+    registration_date: null,
   });
 
-  // Update farmer data when prop changes
-  React.useEffect(() => {
-    if (propFarmerData) {
-      setFarmerData((prev) => ({
-        ...prev,
-        name: propFarmerData.name || prev.name,
-        phone: propFarmerData.phone || prev.phone,
-        district: propFarmerData.district || prev.district,
-        farmer_id: propFarmerData.farmer_id,
-        language: propFarmerData.language || language,
-        registration_date: propFarmerData.registration_date,
-      }));
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Fetch actual farmer data from backend API
+  const fetchFarmerData = async () => {
+    setDataLoading(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setDataLoading(false);
+        return;
+      }
+
+      const response = await fetch("http://localhost:8000/api/auth/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const profileData = await response.json();
+
+        // Parse total_area from backend (e.g., "4.5 acres" -> {size: "4.5", unit: "acres"})
+        let parsedFarmSize = "";
+        let parsedFarmUnit = "acres";
+        if (profileData.total_area) {
+          const areaMatch = profileData.total_area.match(/^([\d.]+)\s*(\w+)$/);
+          if (areaMatch) {
+            parsedFarmSize = areaMatch[1];
+            parsedFarmUnit = areaMatch[2];
+          }
+        }
+
+        // Map backend data to frontend state
+        setFarmerData({
+          name: profileData.name || "",
+          phone: profileData.phone || "",
+          state: profileData.state || "",
+          district: profileData.district || "",
+          taluka: profileData.taluka || "",
+          village: profileData.village || "",
+          pincode: profileData.pincode || "",
+          farmSize: parsedFarmSize,
+          farmSizeUnit: parsedFarmUnit,
+          farmCategory: profileData.farm_category || "",
+          soilType: profileData.soil_type || "",
+          irrigationType: profileData.irrigation_type || "",
+          currentSeason: profileData.current_season || "",
+          farmingExperience: profileData.farming_experience || "",
+          mainCrops: profileData.main_crops || [],
+          farmer_id: profileData.farmer_id,
+          language: profileData.language || language,
+          registration_date: profileData.registration_date,
+        });
+      } else {
+        console.error("Failed to fetch farmer data");
+      }
+    } catch (error) {
+      console.error("Error fetching farmer data:", error);
+    } finally {
+      setDataLoading(false);
     }
-  }, [propFarmerData, language]);
+  };
+
+  // Fetch farmer data on component mount
+  React.useEffect(() => {
+    fetchFarmerData();
+  }, [language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [editData, setEditData] = useState({ ...farmerData });
 
@@ -58,7 +122,6 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
       farmer: "Farmer",
       name: "Name",
       phone: "Phone Number",
-      email: "Email",
       state: "State",
       district: "District",
       taluka: "Taluka/Tehsil",
@@ -79,6 +142,12 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
       cancel: "Cancel",
       cancelEdit: "Cancel",
       profileUpdated: "Profile updated successfully!",
+      selectSeason: "Select Season",
+      selectExperience: "Select Experience",
+      selectSoilType: "Select soil type",
+      selectIrrigation: "Select irrigation type",
+      farmCategory: "Farm Category",
+      selectFarmCategory: "Select category",
     },
     hi: {
       title: "किसान सेटिंग्स",
@@ -87,7 +156,6 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
       farmer: "किसान",
       name: "नाम",
       phone: "फोन नंबर",
-      email: "ईमेल",
       state: "राज्य",
       district: "जिला",
       taluka: "तालुका/तहसील",
@@ -108,6 +176,12 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
       cancel: "रद्द करें",
       cancelEdit: "रद्द करें",
       profileUpdated: "प्रोफाइल सफलतापूर्वक अपडेट हो गया!",
+      selectSeason: "मौसम चुनें",
+      selectExperience: "अनुभव चुनें",
+      selectSoilType: "मिट्टी का प्रकार चुनें",
+      selectIrrigation: "सिंचाई का प्रकार चुनें",
+      farmCategory: "खेत की श्रेणी",
+      selectFarmCategory: "श्रेणी चुनें",
     },
     ml: {
       title: "കർഷക ക്രമീകരണങ്ങൾ",
@@ -116,7 +190,6 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
       farmer: "കർഷകൻ",
       name: "പേര്",
       phone: "ഫോൺ നമ്പർ",
-      email: "ഇമെയിൽ",
       state: "സംസ്ഥാനം",
       district: "ജില്ല",
       taluka: "താലൂക്ക്/തഹസീൽ",
@@ -137,6 +210,12 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
       cancel: "റദ്ദാക്കുക",
       cancelEdit: "റദ്ദാക്കുക",
       profileUpdated: "പ്രൊഫൈൽ വിജയകരമായി അപ്ഡേറ്റ് ചെയ്തു!",
+      selectSeason: "സീസൺ തിരഞ്ഞെടുക്കുക",
+      selectExperience: "അനുഭവം തിരഞ്ഞെടുക്കുക",
+      selectSoilType: "മണ്ണിന്റെ തരം തിരഞ്ഞെടുക്കുക",
+      selectIrrigation: "ജലസേചന തരം തിരഞ്ഞെടുക്കുക",
+      farmCategory: "ഫാം വിഭാഗം",
+      selectFarmCategory: "വിഭാഗം തിരഞ്ഞെടുക്കുക",
     },
   };
 
@@ -330,27 +409,70 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
       editData.district || farmerData.district
     ] || [];
 
-  // Soil types for Kerala
-  const soilTypes = [
-    "Laterite",
-    "Alluvial",
-    "Red Soil",
-    "Coastal Alluvium",
-    "Hill Soil",
-    "Black Cotton",
-    "Sandy Loam",
-  ];
+  // Get standardized options based on language
+  const soilTypeOptions = Object.values(SOIL_TYPE_OPTIONS).map((option) => ({
+    value: option.value,
+    label:
+      language === "hi"
+        ? option.hiLabel
+        : language === "ml"
+        ? option.mlLabel
+        : option.label,
+  }));
 
-  // Irrigation types
-  const irrigationTypes = [
-    "Rain-fed",
-    "Bore well",
-    "Canal",
-    "Drip irrigation",
-    "Sprinkler",
-    "Tank irrigation",
-    "River water",
-  ];
+  const irrigationTypeOptions = Object.values(IRRIGATION_TYPE_OPTIONS).map(
+    (option) => ({
+      value: option.value,
+      label:
+        language === "hi"
+          ? option.hiLabel
+          : language === "ml"
+          ? option.mlLabel
+          : option.label,
+    })
+  );
+
+  const currentSeasonOptions = Object.values(SEASON_OPTIONS).map((option) => ({
+    value: option.value,
+    label:
+      language === "hi"
+        ? option.hiLabel
+        : language === "ml"
+        ? option.mlLabel
+        : option.label,
+  }));
+
+  const farmingExperienceOptions = Object.values(
+    FARMING_EXPERIENCE_OPTIONS
+  ).map((option) => ({
+    value: option.value,
+    label:
+      language === "hi"
+        ? option.hiLabel
+        : language === "ml"
+        ? option.mlLabel
+        : option.label,
+  }));
+
+  const farmSizeOptions = Object.values(FARM_SIZE_OPTIONS).map((option) => ({
+    value: option.value,
+    label:
+      language === "hi"
+        ? option.hiLabel
+        : language === "ml"
+        ? option.mlLabel
+        : option.label,
+  }));
+
+  const farmSizeUnitOptions = Object.values(FARM_SIZE_UNITS).map((option) => ({
+    value: option.value,
+    label:
+      language === "hi"
+        ? option.hiLabel
+        : language === "ml"
+        ? option.mlLabel
+        : option.label,
+  }));
 
   // Handle profile image upload
   const handleImageUpload = (event) => {
@@ -409,7 +531,6 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
         },
         body: JSON.stringify({
           name: editData.name,
-          email: editData.email,
           district: editData.district,
           village: editData.village,
           state: editData.state,
@@ -417,6 +538,7 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
           pincode: editData.pincode,
           farm_size: editData.farmSize,
           farm_size_unit: editData.farmSizeUnit,
+          farm_category: editData.farmCategory,
           soil_type: editData.soilType,
           irrigation_type: editData.irrigationType,
           current_season: editData.currentSeason,
@@ -461,6 +583,28 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
     setEditData({ ...farmerData });
     setIsEditing(false);
   };
+
+  // Show loading state while fetching data
+  if (dataLoading) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex justify-center items-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">
+                {language === "hi"
+                  ? "आपकी प्रोफ़ाइल लोड हो रही है..."
+                  : language === "ml"
+                  ? "നിങ്ങളുടെ പ്രൊഫൈൽ ലോഡ് ചെയ്യുന്നു..."
+                  : "Loading your profile..."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -632,21 +776,6 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
               </div>
 
               <div>
-                <Label>{t.email}</Label>
-                {isEditing ? (
-                  <Input
-                    value={editData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    className="mt-1"
-                  />
-                ) : (
-                  <p className="mt-1 text-gray-700 font-medium">
-                    {farmerData.email}
-                  </p>
-                )}
-              </div>
-
-              <div>
                 <Label>{t.village}</Label>
                 {isEditing ? (
                   <Input
@@ -760,6 +889,29 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
               </div>
             </div>
           </Card>
+
+          {/* Security Settings - Passkey Setup */}
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+              🔐 Security Settings
+            </h2>
+
+            {/* Create New Passkey */}
+            <PasskeySetup
+              onPasskeyCreated={(data) => {
+                console.log("Passkey created successfully:", data);
+                // Refresh passkey list after creation
+                window.location.reload(); // Simple way to refresh
+              }}
+              language={language}
+            />
+
+            {/* Divider */}
+            <div className="my-6 border-t border-gray-200"></div>
+
+            {/* Manage Existing Passkeys */}
+            <PasskeyManagement language={language} />
+          </Card>
         </div>
 
         {/* Farm Information */}
@@ -779,6 +931,7 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
                     }
                     type="number"
                     className="flex-1"
+                    placeholder="Enter area"
                   />
                   <select
                     value={editData.farmSizeUnit}
@@ -787,13 +940,40 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
                     }
                     className="px-3 py-2 border border-gray-300 rounded-lg"
                   >
-                    <option value="acres">{t.acres}</option>
-                    <option value="hectares">{t.hectares}</option>
+                    {farmSizeUnitOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               ) : (
                 <p className="mt-1 text-gray-700 font-medium">
                   {farmerData.farmSize} {farmerData.farmSizeUnit}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label>{t.farmCategory}</Label>
+              {isEditing ? (
+                <select
+                  value={editData.farmCategory || ""}
+                  onChange={(e) =>
+                    handleInputChange("farmCategory", e.target.value)
+                  }
+                  className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">{t.selectFarmCategory}</option>
+                  {farmSizeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="mt-1 text-gray-700 font-medium">
+                  {farmerData.farmCategory || "-"}
                 </p>
               )}
             </div>
@@ -808,9 +988,10 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
                   }
                   className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  {soilTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
+                  <option value="">{t.selectSoilType}</option>
+                  {soilTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
@@ -831,9 +1012,10 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
                   }
                   className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  {irrigationTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
+                  <option value="">{t.selectIrrigation}</option>
+                  {irrigationTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
@@ -847,13 +1029,20 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
             <div>
               <Label>{t.currentSeason}</Label>
               {isEditing ? (
-                <Input
+                <select
                   value={editData.currentSeason}
                   onChange={(e) =>
                     handleInputChange("currentSeason", e.target.value)
                   }
-                  className="mt-1"
-                />
+                  className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">{t.selectSeason}</option>
+                  {currentSeasonOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <p className="mt-1 text-gray-700 font-medium">
                   {farmerData.currentSeason}
@@ -864,17 +1053,23 @@ const Settings = ({ language = "en", farmerData: propFarmerData }) => {
             <div>
               <Label>{t.farmingExperience}</Label>
               {isEditing ? (
-                <Input
+                <select
                   value={editData.farmingExperience}
                   onChange={(e) =>
                     handleInputChange("farmingExperience", e.target.value)
                   }
-                  type="number"
-                  className="mt-1"
-                />
+                  className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">{t.selectExperience}</option>
+                  {farmingExperienceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <p className="mt-1 text-gray-700 font-medium">
-                  {farmerData.farmingExperience} years
+                  {farmerData.farmingExperience}
                 </p>
               )}
             </div>

@@ -6,6 +6,10 @@ from typing import List, Dict, Any, Optional, Tuple
 from utils.data_processing import parse_price, clean_data_rows
 from utils.date_utils import get_date_range, format_date_for_api
 from utils.response_utils import create_success_response, create_error_response
+import urllib3
+
+# Disable SSL warnings for self-signed certificates
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class KeralaMarketService:
     """Service for Kerala vegetable market operations"""
@@ -22,7 +26,9 @@ class KeralaMarketService:
         }
 
         try:
-            response = requests.get(api_url, headers=headers, timeout=15)
+            # Disable SSL verification for this self-signed certificate  
+            # Reduced timeout to 8 seconds for faster failure
+            response = requests.get(api_url, headers=headers, timeout=8, verify=False)
             if response.status_code == 200:
                 json_data = response.json()
                 if json_data.get("data"):
@@ -54,8 +60,12 @@ class KeralaMarketService:
                     return df_data
             else:
                 print(f"API Error: {response.status_code} - {response.text}")
+        except requests.exceptions.Timeout:
+            print(f"Timeout error fetching vegetable prices for {date_str}")
+        except requests.exceptions.RequestException as e:
+            print(f"Request error fetching vegetable prices for {date_str}: {e}")
         except Exception as e:
-            print(f"Error fetching vegetable prices: {e}")
+            print(f"Error fetching vegetable prices for {date_str}: {e}")
         
         return []
     
@@ -74,6 +84,11 @@ class KeralaMarketService:
             
             # Parse dates
             start, end = get_date_range(start_date, end_date)
+            
+            # Limit to maximum 30 days to prevent long waits
+            date_diff = (end - start).days
+            if date_diff > 30:
+                return create_error_response("Date range too large. Please select a maximum of 30 days.")
             
             all_data = []
             current_date = start

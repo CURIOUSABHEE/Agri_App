@@ -10,6 +10,45 @@ const api = axios.create({
   },
 });
 
+// Add request interceptor to automatically include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log("🔐 Adding auth token to request:", config.url);
+    } else {
+      console.log("⚠️ No auth token found for request:", config.url);
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle authentication errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("🚨 API Error:", {
+      url: error.config?.url,
+      status: error.response?.status,
+      data: error.response?.data,
+      headers: error.config?.headers,
+    });
+
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Token expired, invalid, or forbidden - clear storage and redirect to login
+      console.log("🔐 Authentication error, clearing storage and reloading");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("farmerData");
+      window.location.reload(); // This will trigger AuthWrapper to show login
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Simple dashboard service
 export const dashboardService = {
   getDashboardData: async () => {
@@ -149,5 +188,69 @@ export const cropPredictionService = {
     return response.data;
   },
 };
+
+// Authentication service
+export const authService = {
+  signup: async (userData) => {
+    try {
+      const response = await api.post("/auth/signup", userData);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Signup API Error:", error.response?.data);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  },
+
+  login: async (credentials) => {
+    try {
+      const response = await api.post("/auth/login", credentials);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Login API Error:", error.response?.data);
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail);
+      }
+      throw error;
+    }
+  },
+
+  logout: async () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const response = await api.post(
+        "/auth/logout",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      return response.data;
+    }
+  },
+
+  getCurrentUser: async () => {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
+
+    const response = await api.get("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  },
+};
+
+// Backward compatibility exports
+export const signupUser = authService.signup;
+export const loginUser = authService.login;
+export const logoutUser = authService.logout;
 
 export default api;

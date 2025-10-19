@@ -22,10 +22,20 @@ function MarketPrices({ language }) {
   const [error, setError] = useState("");
   const [selectedCrops, setSelectedCrops] = useState([]);
   const [availableCrops, setAvailableCrops] = useState([]);
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date().toISOString().split("T")[0],
-    endDate: new Date().toISOString().split("T")[0],
-  });
+
+  // Initialize with last 7 days instead of 9 months
+  const getDefaultDateRange = () => {
+    const today = new Date();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+
+    return {
+      startDate: sevenDaysAgo.toISOString().split("T")[0],
+      endDate: today.toISOString().split("T")[0],
+    };
+  };
+
+  const [dateRange, setDateRange] = useState(getDefaultDateRange());
   const [tips, setTips] = useState([]);
   const [vegetableColumn, setVegetableColumn] = useState(null);
   const [analysisData, setAnalysisData] = useState(null);
@@ -50,7 +60,14 @@ function MarketPrices({ language }) {
       }
 
       console.log("🔍 Fetching from URL:", url);
-      const response = await fetch(url);
+
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       console.log("📊 Response status:", response.status);
 
       if (response.ok) {
@@ -75,6 +92,9 @@ function MarketPrices({ language }) {
         );
       }
     } catch (error) {
+      if (error.name === "AbortError") {
+        throw new Error("Request timeout - please try a smaller date range");
+      }
       console.error("❌ Error fetching data from backend:", error);
       throw error;
     }

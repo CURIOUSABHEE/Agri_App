@@ -56,8 +56,13 @@ const AppBar = ({
   // Helper function to get farmer's location
   const getFarmerLocation = () => {
     const district = farmerData?.district;
-    if (!district) return "India";
-    return `${district}, Kerala, India`;
+    const state = farmerData?.state;
+
+    if (!district && !state) return "India";
+    if (!district && state) return `${state}, India`;
+    if (district && !state) return `${district}, India`;
+
+    return `${district}, ${state}, India`;
   };
 
   const getPageTitle = (item) => {

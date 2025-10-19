@@ -102,19 +102,38 @@ function InventoryManagement({ language }) {
   };
 
   const handleAddItem = async () => {
-    if (!newItem.name || !newItem.quantity || !newItem.pricePerUnit) {
+    if (
+      !newItem.name ||
+      !newItem.quantity ||
+      !newItem.pricePerUnit ||
+      !newItem.category ||
+      !newItem.unit
+    ) {
       alert(
         language === "hi"
-          ? "कृपया आवश्यक फ़ील्ड भरें"
+          ? "कृपया आवश्यक फ़ील्ड भरें (नाम, मात्रा, मूल्य, श्रेणी, इकाई)"
           : language === "ml"
-          ? "ആവശ്യമായ ഫീൽഡുകൾ പൂരിപ്പിക്കുക"
-          : "Please fill required fields"
+          ? "ആവശ്യമായ ഫീൽഡുകൾ പൂരിപ്പിക്കുക (പേര്, അളവ്, വില, വിഭാഗം, യൂണിറ്റ്)"
+          : "Please fill required fields (name, quantity, price, category, unit)"
       );
       return;
     }
 
     try {
-      await inventoryService.addItem(newItem);
+      // Map frontend fields to backend model
+      const itemData = {
+        name: newItem.name,
+        category: newItem.category,
+        quantity: parseInt(newItem.quantity),
+        unit: newItem.unit,
+        price: parseFloat(newItem.pricePerUnit), // Map pricePerUnit to price
+        supplier: newItem.supplier || null,
+        expiry_date: newItem.expiryDate || null,
+        location: newItem.location || null,
+        minimum_stock: parseInt(newItem.minStockLevel) || 10,
+      };
+
+      await inventoryService.addItem(itemData);
       setNewItem({
         name: "",
         category: "inputs",
@@ -839,7 +858,8 @@ function InventoryManagement({ language }) {
                       ? "इकाई"
                       : language === "ml"
                       ? "യൂണിറ്റ്"
-                      : "Unit"}
+                      : "Unit"}{" "}
+                    *
                   </Label>
                   <Input
                     type="text"

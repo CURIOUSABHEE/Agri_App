@@ -55,14 +55,20 @@ function DiseaseDetector({ language }) {
     try {
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append("file", selectedImage);
-      formData.append("language", language);
+      formData.append("image", selectedImage);
+      // Optional: Add crop type if we have it (could add a dropdown for this)
+      // formData.append("crop_type", "tomato");
+      // Optional: Add symptoms if we have them
+      // formData.append("symptoms", "brown spots");
 
       // Call the disease detection API
-      const response = await fetch("http://localhost:8000/api/disease/detect", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "http://localhost:8000/api/disease-detection/analyze",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -72,9 +78,9 @@ function DiseaseDetector({ language }) {
       const data = await response.json();
 
       if (data.success) {
-        setResult(data.data);
+        setResult(data.analysis);
       } else {
-        throw new Error(data.message || "Analysis failed");
+        throw new Error(data.error || "Analysis failed");
       }
     } catch (error) {
       console.error("Disease detection error:", error);

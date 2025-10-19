@@ -100,9 +100,7 @@ const Dashboard = ({ language = "en" }) => {
             ? `स्वागत है, ${farmerData?.name || "किसान"}! 👋`
             : `Welcome, ${farmerData?.name || "Farmer"}! 👋`}
         </h1>
-        <p className="text-gray-600 mt-2">
-          {farmerData?.location || "Location not specified"}
-        </p>
+        <p className="text-gray-600 mt-2">{farmerData?.location || ""}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -117,7 +115,7 @@ const Dashboard = ({ language = "en" }) => {
                   : "Total Farms"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
-                {farmerData?.farm_count || 0}
+                {farmerData?.farm_count ?? "-"}
               </p>
             </div>
             <div className="text-3xl">🏡</div>
@@ -135,7 +133,7 @@ const Dashboard = ({ language = "en" }) => {
                   : "Total Area"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
-                {farmerData?.total_area || "0 acres"}
+                {farmerData?.total_area ?? "-"}
               </p>
             </div>
             <div className="text-3xl">🌾</div>
@@ -152,7 +150,9 @@ const Dashboard = ({ language = "en" }) => {
                   ? "सक्रिय मौसम"
                   : "Active Season"}
               </p>
-              <p className="text-2xl font-bold text-gray-800">Kharif</p>
+              <p className="text-2xl font-bold text-gray-800">
+                {farmerData?.active_season ?? "-"}
+              </p>
             </div>
             <div className="text-3xl">🌱</div>
           </div>
@@ -168,7 +168,11 @@ const Dashboard = ({ language = "en" }) => {
                   ? "मौसम"
                   : "Weather"}
               </p>
-              <p className="text-2xl font-bold text-gray-800">28°C</p>
+              <p className="text-2xl font-bold text-gray-800">
+                {farmerData?.weather?.temperature
+                  ? `${farmerData.weather.temperature}°C`
+                  : "-"}
+              </p>
             </div>
             <div className="text-3xl">☀️</div>
           </div>
@@ -269,13 +273,7 @@ const Dashboard = ({ language = "en" }) => {
                   ? "फसलें देखें"
                   : "View Crops"}
               </h3>
-              <p className="text-sm text-gray-600">
-                {language === "ml"
-                  ? "നിങ്ങളുടെ വിള ഡാറ്റ നിയന്ത്രിക്കുക"
-                  : language === "hi"
-                  ? "अपना फसल डेटा प्रबंधित करें"
-                  : "Manage your crop data"}
-              </p>
+              <p className="text-sm text-gray-600">&nbsp;</p>
             </button>
 
             <button className="p-4 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors duration-200 text-left">
@@ -287,13 +285,7 @@ const Dashboard = ({ language = "en" }) => {
                   ? "विश्लेषण"
                   : "Analytics"}
               </h3>
-              <p className="text-sm text-gray-600">
-                {language === "ml"
-                  ? "ഫാം അനലിറ്റിക്സ് കാണുക"
-                  : language === "hi"
-                  ? "फार्म विश्लेषण देखें"
-                  : "View farm analytics"}
-              </p>
+              <p className="text-sm text-gray-600">&nbsp;</p>
             </button>
 
             <button className="p-4 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors duration-200 text-left">
@@ -305,13 +297,7 @@ const Dashboard = ({ language = "en" }) => {
                   ? "बाजार भाव"
                   : "Market Prices"}
               </h3>
-              <p className="text-sm text-gray-600">
-                {language === "ml"
-                  ? "നിലവിലെ വിലകൾ പരിശോധിക്കുക"
-                  : language === "hi"
-                  ? "वर्तमान कीमतें जांचें"
-                  : "Check current prices"}
-              </p>
+              <p className="text-sm text-gray-600">&nbsp;</p>
             </button>
           </div>
         </Card>

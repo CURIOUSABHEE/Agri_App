@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
-import Authentication from "./Authentication";
+import AuthFlow from "./AuthFlow";
+import PostLoginPasskeySetup from "./PostLoginPasskeySetup";
 
-const AuthWrapper = ({ children, language }) => {
+const AuthWrapper = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [farmerData, setFarmerData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPasskeySetup, setShowPasskeySetup] = useState(false);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   // Check for existing authentication on component mount
   useEffect(() => {
@@ -77,6 +80,41 @@ const AuthWrapper = ({ children, language }) => {
       setFarmerData(authData.farmer_data);
     }
 
+    // Check if this was a password login (not passkey login)
+    const isPasswordLogin =
+      !authData.farmer_data?.auth_method?.includes("passkey");
+
+    if (isPasswordLogin) {
+      // Check if user already has a passkey
+      try {
+        const token = authData.access_token;
+        const passkeysResponse = await fetch(
+          "http://localhost:8000/api/auth/passkey/list",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (passkeysResponse.ok) {
+          const passkeysData = await passkeysResponse.json();
+          const hasExistingPasskey =
+            passkeysData.passkeys && passkeysData.passkeys.length > 0;
+
+          if (!hasExistingPasskey) {
+            // Show passkey setup for new password logins
+            setJustLoggedIn(true);
+            setShowPasskeySetup(true);
+            return; // Don't set authenticated yet
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check existing passkeys:", error);
+      }
+    }
+
     setIsAuthenticated(true);
   };
 
@@ -85,6 +123,20 @@ const AuthWrapper = ({ children, language }) => {
     localStorage.removeItem("farmerData");
     setIsAuthenticated(false);
     setFarmerData(null);
+    setShowPasskeySetup(false);
+    setJustLoggedIn(false);
+  };
+
+  const handlePasskeySetupComplete = () => {
+    setShowPasskeySetup(false);
+    setJustLoggedIn(false);
+    setIsAuthenticated(true);
+  };
+
+  const handleSkipPasskeySetup = () => {
+    setShowPasskeySetup(false);
+    setJustLoggedIn(false);
+    setIsAuthenticated(true);
   };
 
   // Show loading spinner
@@ -99,9 +151,19 @@ const AuthWrapper = ({ children, language }) => {
     );
   }
 
+  // Show passkey setup after successful password login
+  if (showPasskeySetup && justLoggedIn) {
+    return (
+      <PostLoginPasskeySetup
+        onSetupComplete={handlePasskeySetupComplete}
+        onSkip={handleSkipPasskeySetup}
+      />
+    );
+  }
+
   // Show authentication if not logged in
   if (!isAuthenticated) {
-    return <Authentication onLogin={handleLogin} language={language} />;
+    return <AuthFlow onAuthSuccess={handleLogin} />;
   }
 
   // Show main app with farmer context

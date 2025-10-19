@@ -41,7 +41,7 @@ const Layout = ({ farmerData, onLogout }) => {
       case "inventory":
         return <InventoryManagement language={language} />;
       case "settings":
-        return <Settings language={language} farmerData={farmerData} />;
+        return <Settings language={language} />;
       default:
         return (
           <div className="p-6 bg-gray-50 min-h-screen">

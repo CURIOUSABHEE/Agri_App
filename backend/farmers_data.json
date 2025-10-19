@@ -82,5 +82,32 @@
     "chat_history": [],
     "farms_count": 0,
     "inventory_items": 0
+  },
+  "farmer_6bb67eefdb84cf82": {
+    "farmer_id": "farmer_6bb67eefdb84cf82",
+    "name": "Abhishek Jamdade",
+    "phone": "7208590785",
+    "password_hash": "$2b$12$RK3qmmHAIb7/Byza.pQbEep3pCfRiaBGgacuaKYjvvidEoWd7Q/pa",
+    "state": "Kerala",
+    "district": "Kollam",
+    "village": "Perinad",
+    "farms": [
+      {
+        "size": "1",
+        "unit": "acres"
+      },
+      {
+        "size": "3.5",
+        "unit": "acres"
+      }
+    ],
+    "language": "en",
+    "registration_date": "2025-10-14T18:35:58.228321",
+    "last_active": "2025-10-16T19:36:18.993383",
+    "auth_method": "password",
+    "inventory": [],
+    "chat_history": [],
+    "farms_count": 2,
+    "inventory_items": 0
   }
 }

@@ -24,9 +24,12 @@ from api import (
     schemes, 
     disease_detection,
     market_locator,
-    crop_prediction
+    crop_prediction,
+    soil_data
 )
 from api.auth import auth_router
+from api.agricultural_data import router as agricultural_data_router
+from services.farmer_profile_service import router as farmer_router
 
 # Load environment variables
 load_dotenv()
@@ -51,23 +54,19 @@ app.add_middleware(
         "http://localhost:5174",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        # ✅ Add Google's OAuth domains
-        "https://accounts.google.com",
-        "https://oauth2.googleapis.com"
+        "http://127.0.0.1:5174"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
-    # ✅ Add these for Google Sign-In
-    expose_headers=["*"],
-    max_age=3600,
 )
 
 # ...existing code...
 
 # Include API routers with their respective endpoints
 app.include_router(auth_router)  # Authentication system
+app.include_router(agricultural_data_router)  # Centralized agricultural data
+app.include_router(farmer_router)  # Farmer profile and farm management
 app.include_router(dashboard.router)
 app.include_router(weather.router)
 app.include_router(kerala_market.router)
@@ -78,6 +77,7 @@ app.include_router(schemes.router)
 app.include_router(disease_detection.router)
 app.include_router(market_locator.router, prefix="/api/markets", tags=["Market Locator"])
 app.include_router(crop_prediction.router)
+app.include_router(soil_data.router)  # Soil data from data.gov.in
 
 @app.get("/")
 async def root():
@@ -104,6 +104,8 @@ async def root():
             "health": "/health",
             "api_routes": [
                 "/api/auth",
+                "/api/agricultural-data",
+                "/api/farmer",
                 "/api/dashboard",
                 "/api/weather", 
                 "/api/kerala-market",
