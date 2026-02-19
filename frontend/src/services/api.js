@@ -193,6 +193,32 @@ export const cropPredictionService = {
   },
 };
 
+// Equipment Rental service
+export const rentalService = {
+  getNearbyEquipment: async (lat, lng, radius = 50, category = null) => {
+    const params = { lat, lng, radius };
+    if (category) params.category = category;
+    const response = await api.get("/rental/nearby", { params });
+    return response.data;
+  },
+  addEquipment: async (equipmentData) => {
+    const response = await api.post("/rental/equipment", equipmentData);
+    return response.data;
+  },
+  getMyListings: async (ownerId) => {
+    const response = await api.get(`/rental/my-listings?owner_id=${ownerId}`);
+    return response.data;
+  },
+  getMyBookings: async (userId) => {
+    const response = await api.get(`/rental/my-bookings?user_id=${userId}`);
+    return response.data;
+  },
+  deleteEquipment: async (equipmentId, ownerId) => {
+    const response = await api.delete(`/rental/equipment/${equipmentId}?owner_id=${ownerId}`);
+    return response.data;
+  }
+};
+
 // Authentication service
 export const authService = {
   signup: async (userData) => {
@@ -234,16 +260,19 @@ export const authService = {
         }
       );
       localStorage.removeItem("token");
+      localStorage.removeItem("authToken"); // Clear both
       localStorage.removeItem("user");
+      localStorage.removeItem("farmerData");
       return response.data;
     }
   },
 
   getCurrentUser: async () => {
-    const token = localStorage.getItem("token");
+    // Try both keys for compatibility
+    const token = localStorage.getItem("authToken") || localStorage.getItem("token");
     if (!token) throw new Error("No token found");
 
-    const response = await api.get("/auth/me", {
+    const response = await api.get("/auth/profile", {
       headers: {
         Authorization: `Bearer ${token}`,
       },

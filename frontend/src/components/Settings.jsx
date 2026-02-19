@@ -406,7 +406,7 @@ const Settings = ({ language = "en" }) => {
   // Get available talukas for selected district
   const availableTalukas =
     getDistrictsAndTalukas(editData.state || farmerData.state).talukas[
-      editData.district || farmerData.district
+    editData.district || farmerData.district
     ] || [];
 
   // Get standardized options based on language
@@ -416,8 +416,8 @@ const Settings = ({ language = "en" }) => {
       language === "hi"
         ? option.hiLabel
         : language === "ml"
-        ? option.mlLabel
-        : option.label,
+          ? option.mlLabel
+          : option.label,
   }));
 
   const irrigationTypeOptions = Object.values(IRRIGATION_TYPE_OPTIONS).map(
@@ -427,8 +427,8 @@ const Settings = ({ language = "en" }) => {
         language === "hi"
           ? option.hiLabel
           : language === "ml"
-          ? option.mlLabel
-          : option.label,
+            ? option.mlLabel
+            : option.label,
     })
   );
 
@@ -438,8 +438,8 @@ const Settings = ({ language = "en" }) => {
       language === "hi"
         ? option.hiLabel
         : language === "ml"
-        ? option.mlLabel
-        : option.label,
+          ? option.mlLabel
+          : option.label,
   }));
 
   const farmingExperienceOptions = Object.values(
@@ -450,8 +450,8 @@ const Settings = ({ language = "en" }) => {
       language === "hi"
         ? option.hiLabel
         : language === "ml"
-        ? option.mlLabel
-        : option.label,
+          ? option.mlLabel
+          : option.label,
   }));
 
   const farmSizeOptions = Object.values(FARM_SIZE_OPTIONS).map((option) => ({
@@ -460,8 +460,8 @@ const Settings = ({ language = "en" }) => {
       language === "hi"
         ? option.hiLabel
         : language === "ml"
-        ? option.mlLabel
-        : option.label,
+          ? option.mlLabel
+          : option.label,
   }));
 
   const farmSizeUnitOptions = Object.values(FARM_SIZE_UNITS).map((option) => ({
@@ -470,8 +470,8 @@ const Settings = ({ language = "en" }) => {
       language === "hi"
         ? option.hiLabel
         : language === "ml"
-        ? option.mlLabel
-        : option.label,
+          ? option.mlLabel
+          : option.label,
   }));
 
   // Handle profile image upload
@@ -587,18 +587,41 @@ const Settings = ({ language = "en" }) => {
   // Show loading state while fetching data
   if (dataLoading) {
     return (
-      <div className="p-6 bg-gray-50 min-h-screen">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex justify-center items-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">
-                {language === "hi"
-                  ? "आपकी प्रोफ़ाइल लोड हो रही है..."
-                  : language === "ml"
-                  ? "നിങ്ങളുടെ പ്രൊഫൈൽ ലോഡ് ചെയ്യുന്നു..."
-                  : "Loading your profile..."}
-              </p>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4 md:p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Skeleton hero */}
+          <div className="bg-gradient-to-r from-green-700 to-emerald-600 rounded-3xl p-6 mb-8 shadow-xl">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-7 w-48 bg-white/20 rounded-xl animate-pulse" />
+                <div className="h-4 w-64 bg-white/10 rounded-lg animate-pulse" />
+              </div>
+            </div>
+          </div>
+          {/* Spinner */}
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 border-4 border-green-100 rounded-full" />
+              <div className="absolute inset-0 border-4 border-t-green-500 rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center text-2xl">⚙️</div>
+            </div>
+            <p className="text-gray-600 font-medium">
+              {language === "hi" ? "आपकी प्रोफ़ाइल लोड हो रही है..." : language === "ml" ? "നിങ്ങളുടെ പ്രൊഫൈൽ ലോഡ് ചെയ്യുന്നു..." : "Loading your profile..."}
+            </p>
+            {/* Skeleton cards */}
+            <div className="w-full max-w-2xl space-y-4 mt-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-2xl p-5 animate-pulse shadow-sm">
+                  <div className="h-5 w-40 bg-gray-200 rounded-lg mb-4" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="h-4 bg-gray-100 rounded-lg" />
+                    <div className="h-4 bg-gray-100 rounded-lg" />
+                    <div className="h-4 bg-gray-100 rounded-lg" />
+                    <div className="h-4 bg-gray-100 rounded-lg" />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -607,133 +630,106 @@ const Settings = ({ language = "en" }) => {
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">{t.title}</h1>
-            {farmerData.farmer_id && (
-              <p className="text-sm text-gray-500 mt-1">
-                Farmer ID: {farmerData.farmer_id}
-              </p>
-            )}
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4 md:p-6">
+
+      {/* Hero Header */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-green-700 via-green-600 to-emerald-600 rounded-3xl p-6 mb-8 shadow-xl shadow-green-200">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-12 w-32 h-32 bg-white/5 rounded-full translate-y-1/2" />
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center text-4xl border border-white/20 shadow-lg">⚙️</div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white">{t.title}</h1>
+              {farmerData.farmer_id && (
+                <p className="text-green-200 text-sm mt-1">ID: {farmerData.farmer_id}</p>
+              )}
+            </div>
           </div>
+          {/* Action Buttons */}
           {!isEditing ? (
-            <Button
-              onClick={() => setIsEditing(true)}
-              className="px-6 py-2 text-white bg-blue-500 hover:bg-blue-600"
-            >
-              📝 {t.editProfile}
-            </Button>
+            <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold px-5 py-2.5 rounded-xl border border-white/30 transition-all hover:-translate-y-0.5">
+              ✏️ {t.editProfile}
+            </button>
           ) : (
-            <div className="flex space-x-3">
-              <Button
-                onClick={handleSave}
-                disabled={loading}
-                className="px-6 py-2 text-white bg-green-500 hover:bg-green-600 disabled:opacity-50"
-              >
-                {loading ? "⏳ Saving..." : "✅ " + t.saveChanges}
-              </Button>
-              <Button
-                onClick={handleCancel}
-                disabled={loading}
-                className="px-6 py-2 text-white bg-gray-500 hover:bg-gray-600 disabled:opacity-50"
-              >
-                ❌ {t.cancelEdit}
-              </Button>
+            <div className="flex gap-3">
+              <button onClick={handleSave} disabled={loading} className="flex items-center gap-2 bg-white text-green-700 font-bold px-5 py-2.5 rounded-xl transition-all hover:bg-green-50 hover:-translate-y-0.5 shadow-lg disabled:opacity-60">
+                {loading ? <><div className="w-4 h-4 border-2 border-green-300 border-t-green-700 rounded-full animate-spin" /> Saving...</> : <>✅ {t.saveChanges}</>}
+              </button>
+              <button onClick={handleCancel} disabled={loading} className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2.5 rounded-xl border border-white/30 transition-all disabled:opacity-60">
+                ✕ {t.cancelEdit}
+              </button>
             </div>
           )}
         </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Save Message */}
         {saveMessage && (
-          <div
-            className={`p-4 rounded-lg ${
-              saveMessage.startsWith("✅")
-                ? "bg-green-100 border border-green-400 text-green-700"
-                : "bg-red-100 border border-red-400 text-red-700"
-            }`}
-          >
+          <div className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${saveMessage.startsWith("✅")
+            ? "bg-green-50 border-green-200 text-green-700"
+            : "bg-red-50 border-red-200 text-red-700"
+            }`}>
             {saveMessage}
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-6">
           {/* Personal Information */}
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-              👤 {t.personalInfo}
-            </h2>
+          <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-green-100">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <span className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">👤</span>
+                {t.personalInfo}
+              </h2>
+            </div>
 
             {/* Profile Picture */}
-            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
+            <div className="flex items-center gap-5 mx-6 mt-6 mb-6 pb-6 border-b border-gray-100">
               <div className="relative">
-                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-200 rounded-full flex items-center justify-center overflow-hidden ring-4 ring-green-200 ring-offset-2 shadow-xl">
                   {profileImage ? (
-                    <img
-                      src={profileImage}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-3xl text-gray-500">👤</span>
+                    <span className="text-4xl">👤</span>
                   )}
                 </div>
                 {isEditing && (
-                  <label className="absolute -bottom-1 -right-1 bg-blue-500 text-white rounded-full p-1 cursor-pointer hover:bg-blue-600">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
+                  <label className="absolute -bottom-1 -right-1 bg-green-500 hover:bg-green-600 text-white rounded-full p-1.5 cursor-pointer transition-colors shadow-lg">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </label>
                 )}
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-800">
-                  {farmerData.name}
-                </h3>
-                <p className="text-gray-600">{t.farmer}</p>
-                <p className="text-sm text-gray-500">
+                <h3 className="text-xl font-bold text-gray-900">{farmerData.name}</h3>
+                <p className="text-gray-500 text-sm">{t.farmer}</p>
+                <p className="text-sm text-gray-400 mt-0.5">
                   {farmerData.district || "District"}, {farmerData.state}
                 </p>
                 {farmerData.registration_date && (
                   <p className="text-xs text-gray-400 mt-1">
-                    Member since:{" "}
-                    {new Date(
-                      farmerData.registration_date
-                    ).toLocaleDateString()}
+                    Member since: {new Date(farmerData.registration_date).toLocaleDateString()}
                   </p>
                 )}
-                <div className="flex items-center space-x-2 mt-1">
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                    Language: {farmerData.language?.toUpperCase() || "EN"}
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-semibold">
+                    {farmerData.language?.toUpperCase() || "EN"}
                   </span>
                   {farmerData.phone && (
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                      Verified
+                    <span className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1">
+                      ✓ Verified
                     </span>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 pt-0">
               <div>
                 <Label>{t.name}</Label>
                 {isEditing ? (
@@ -888,235 +884,238 @@ const Settings = ({ language = "en" }) => {
                 )}
               </div>
             </div>
-          </Card>
+          </div>
 
           {/* Security Settings - Passkey Setup */}
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-              🔐 Security Settings
-            </h2>
-
-            {/* Create New Passkey */}
-            <PasskeySetup
-              onPasskeyCreated={(data) => {
-                console.log("Passkey created successfully:", data);
-                // Refresh passkey list after creation
-                window.location.reload(); // Simple way to refresh
-              }}
-              language={language}
-            />
-
-            {/* Divider */}
-            <div className="my-6 border-t border-gray-200"></div>
-
-            {/* Manage Existing Passkeys */}
-            <PasskeyManagement language={language} />
-          </Card>
+          <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <span className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">🔐</span>
+                Security Settings
+              </h2>
+            </div>
+            <div className="p-6">
+              <PasskeySetup
+                onPasskeyCreated={(data) => {
+                  console.log("Passkey created successfully:", data);
+                  window.location.reload();
+                }}
+                language={language}
+              />
+              <div className="my-6 border-t border-gray-100"></div>
+              <PasskeyManagement language={language} />
+            </div>
+          </div>
         </div>
 
         {/* Farm Information */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-            🚜 {t.farmInfo}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <Label>{t.farmSize}</Label>
-              {isEditing ? (
-                <div className="flex mt-1 space-x-2">
-                  <Input
-                    value={editData.farmSize}
-                    onChange={(e) =>
-                      handleInputChange("farmSize", e.target.value)
-                    }
-                    type="number"
-                    className="flex-1"
-                    placeholder="Enter area"
-                  />
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 px-6 py-4 border-b border-amber-100">
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <span className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">🚜</span>
+              {t.farmInfo}
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <Label>{t.farmSize}</Label>
+                {isEditing ? (
+                  <div className="flex mt-1 space-x-2">
+                    <Input
+                      value={editData.farmSize}
+                      onChange={(e) =>
+                        handleInputChange("farmSize", e.target.value)
+                      }
+                      type="number"
+                      className="flex-1"
+                      placeholder="Enter area"
+                    />
+                    <select
+                      value={editData.farmSizeUnit}
+                      onChange={(e) =>
+                        handleInputChange("farmSizeUnit", e.target.value)
+                      }
+                      className="px-3 py-2 border border-gray-300 rounded-lg"
+                    >
+                      {farmSizeUnitOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-gray-700 font-medium">
+                    {farmerData.farmSize} {farmerData.farmSizeUnit}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label>{t.farmCategory}</Label>
+                {isEditing ? (
                   <select
-                    value={editData.farmSizeUnit}
+                    value={editData.farmCategory || ""}
                     onChange={(e) =>
-                      handleInputChange("farmSizeUnit", e.target.value)
+                      handleInputChange("farmCategory", e.target.value)
                     }
-                    className="px-3 py-2 border border-gray-300 rounded-lg"
+                    className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
-                    {farmSizeUnitOptions.map((option) => (
+                    <option value="">{t.selectFarmCategory}</option>
+                    {farmSizeOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
                   </select>
+                ) : (
+                  <p className="mt-1 text-gray-700 font-medium">
+                    {farmerData.farmCategory || "-"}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label>{t.soilType}</Label>
+                {isEditing ? (
+                  <select
+                    value={editData.soilType}
+                    onChange={(e) =>
+                      handleInputChange("soilType", e.target.value)
+                    }
+                    className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">{t.selectSoilType}</option>
+                    {soilTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="mt-1 text-gray-700 font-medium">
+                    {farmerData.soilType}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label>{t.irrigationType}</Label>
+                {isEditing ? (
+                  <select
+                    value={editData.irrigationType}
+                    onChange={(e) =>
+                      handleInputChange("irrigationType", e.target.value)
+                    }
+                    className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">{t.selectIrrigation}</option>
+                    {irrigationTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="mt-1 text-gray-700 font-medium">
+                    {farmerData.irrigationType}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label>{t.currentSeason}</Label>
+                {isEditing ? (
+                  <select
+                    value={editData.currentSeason}
+                    onChange={(e) =>
+                      handleInputChange("currentSeason", e.target.value)
+                    }
+                    className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">{t.selectSeason}</option>
+                    {currentSeasonOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="mt-1 text-gray-700 font-medium">
+                    {farmerData.currentSeason}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label>{t.farmingExperience}</Label>
+                {isEditing ? (
+                  <select
+                    value={editData.farmingExperience}
+                    onChange={(e) =>
+                      handleInputChange("farmingExperience", e.target.value)
+                    }
+                    className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">{t.selectExperience}</option>
+                    {farmingExperienceOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="mt-1 text-gray-700 font-medium">
+                    {farmerData.farmingExperience}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Main Crops */}
+            <div className="mt-6">
+              <Label>{t.mainCrops}</Label>
+              {isEditing ? (
+                <div className="mt-2">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {editData.mainCrops.map((crop, index) => (
+                      <span
+                        key={index}
+                        className="bg-green-100 text-green-800 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 border border-green-200 hover:bg-green-200 transition-colors"
+                      >
+                        <span>🌱 {crop}</span>
+                        <button
+                          onClick={() => handleCropRemove(crop)}
+                          className="text-red-400 hover:text-red-600 hover:bg-red-100 rounded-full w-4 h-4 flex items-center justify-center transition-colors"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={handleCropAdd}
+                    className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-md shadow-green-200 hover:-translate-y-0.5"
+                  >
+                    + {t.addCrop}
+                  </button>
                 </div>
               ) : (
-                <p className="mt-1 text-gray-700 font-medium">
-                  {farmerData.farmSize} {farmerData.farmSizeUnit}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label>{t.farmCategory}</Label>
-              {isEditing ? (
-                <select
-                  value={editData.farmCategory || ""}
-                  onChange={(e) =>
-                    handleInputChange("farmCategory", e.target.value)
-                  }
-                  className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">{t.selectFarmCategory}</option>
-                  {farmSizeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="mt-1 text-gray-700 font-medium">
-                  {farmerData.farmCategory || "-"}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label>{t.soilType}</Label>
-              {isEditing ? (
-                <select
-                  value={editData.soilType}
-                  onChange={(e) =>
-                    handleInputChange("soilType", e.target.value)
-                  }
-                  className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">{t.selectSoilType}</option>
-                  {soilTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="mt-1 text-gray-700 font-medium">
-                  {farmerData.soilType}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label>{t.irrigationType}</Label>
-              {isEditing ? (
-                <select
-                  value={editData.irrigationType}
-                  onChange={(e) =>
-                    handleInputChange("irrigationType", e.target.value)
-                  }
-                  className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">{t.selectIrrigation}</option>
-                  {irrigationTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="mt-1 text-gray-700 font-medium">
-                  {farmerData.irrigationType}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label>{t.currentSeason}</Label>
-              {isEditing ? (
-                <select
-                  value={editData.currentSeason}
-                  onChange={(e) =>
-                    handleInputChange("currentSeason", e.target.value)
-                  }
-                  className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">{t.selectSeason}</option>
-                  {currentSeasonOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="mt-1 text-gray-700 font-medium">
-                  {farmerData.currentSeason}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label>{t.farmingExperience}</Label>
-              {isEditing ? (
-                <select
-                  value={editData.farmingExperience}
-                  onChange={(e) =>
-                    handleInputChange("farmingExperience", e.target.value)
-                  }
-                  className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">{t.selectExperience}</option>
-                  {farmingExperienceOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="mt-1 text-gray-700 font-medium">
-                  {farmerData.farmingExperience}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Main Crops */}
-          <div className="mt-6">
-            <Label>{t.mainCrops}</Label>
-            {isEditing ? (
-              <div className="mt-2">
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {editData.mainCrops.map((crop, index) => (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {farmerData.mainCrops.length > 0 ? farmerData.mainCrops.map((crop, index) => (
                     <span
                       key={index}
-                      className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm flex items-center space-x-2"
+                      className="bg-green-100 text-green-800 px-3 py-1.5 rounded-full text-sm border border-green-200 flex items-center gap-1.5"
                     >
-                      <span>{crop}</span>
-                      <button
-                        onClick={() => handleCropRemove(crop)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        ×
-                      </button>
+                      🌱 {crop}
                     </span>
-                  ))}
+                  )) : <span className="text-gray-400 text-sm italic">No crops added yet</span>}
                 </div>
-                <Button
-                  onClick={handleCropAdd}
-                  className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2"
-                >
-                  + {t.addCrop}
-                </Button>
-              </div>
-            ) : (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {farmerData.mainCrops.map((crop, index) => (
-                  <span
-                    key={index}
-                    className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm"
-                  >
-                    {crop}
-                  </span>
-                ))}
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

@@ -10,6 +10,8 @@ import DiseaseDetector from "./DiseaseDetector";
 import CropPrediction from "./CropPrediction";
 import Settings from "./Settings";
 import FloatingChatbot from "./FloatingChatbot";
+import EquipRent from "./EquipRent";
+import SmartCultivation from "./SmartCultivation/SmartCultivation";
 
 const Layout = ({ farmerData, onLogout }) => {
   const [activeItem, setActiveItem] = useState("dashboard");
@@ -42,7 +44,9 @@ const Layout = ({ farmerData, onLogout }) => {
   const renderContent = () => {
     switch (activeItem) {
       case "dashboard":
-        return <Dashboard language={language} />;
+        return <Dashboard language={language} setActiveItem={setActiveItem} />;
+      case "smart-cultivation":
+        return <SmartCultivation language={language} onNavigate={setActiveItem} />;
       case "crops":
         return <CropPrediction language={language} />;
       case "reports":
@@ -55,6 +59,8 @@ const Layout = ({ farmerData, onLogout }) => {
         return <DiseaseDetector language={language} />;
       case "inventory":
         return <InventoryManagement language={language} />;
+      case "rental":
+        return <EquipRent language={language} />;
       case "settings":
         return <Settings language={language} />;
       default:

@@ -1,128 +1,125 @@
-"""Chatbot service for agricultural assistance"""
+"""Chatbot service for agricultural assistance — powered by Groq"""
 
 import logging
-from typing import Dict, Any, Optional
+import os
+from typing import Dict, Any
 from datetime import datetime
+from groq import Groq
 
 logger = logging.getLogger(__name__)
 
+
 class ChatbotService:
-    """Service for handling chatbot interactions"""
-    
+    """Service for handling chatbot interactions using Groq LLM"""
+
     def __init__(self):
         self.context_data = {
             "topics": ["crop_management", "weather", "market_prices", "diseases", "schemes"],
             "languages": ["english", "hindi", "malayalam"],
             "last_updated": datetime.now().isoformat()
         }
-    
-    async def get_response(self, message: str, language: str = "english") -> str:
-        """Generate chatbot response based on user message"""
-        try:
-            # Check for empty message
-            if not message or not message.strip():
-                return self._get_general_response(language)
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise RuntimeError("GROQ_API_KEY is not set in environment variables.")
+        self.client = Groq(api_key=api_key)
+        self.model = "llama-3.3-70b-versatile"
 
-            # Try to use Gemini API first
-            import google.generativeai as genai
-            import os
-            
-            api_key = os.getenv("GEMINI_API_KEY")
-            if api_key:
-                try:
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-pro')
-                    
-                    # Create context-aware prompt
-                    system_prompt = f"""
-                    You are Krishi Saathi, an intelligent agricultural assistant helper for farmers in India. 
-                    Your goal is to provide accurate, helpful, and practical advice on farming, crops, weather, government schemes, and market prices.
-                    
-                    Context:
-                    - User Language: {language}
-                    - Role: Agricultural Expert & Assistant
-                    - Tone: Friendly, Respectful, encouraging, and authoritative on farming matters.
-                    
-                    Instructions:
-                    1. Answer the farmer's question simply and clearly.
-                    2. If the user asks about specific live data (like today's weather or exact market prices) that you don't have access to, 
-                       politely explain that you can provide general advice and guide them to the specific section of the app (Weather or Market Prices tab) for real-time data.
-                    3. Do not invent false data.
-                    4. Keep answers concise (under 150 words) unless detailed explanation is requested.
-                    5. Respond in the requested language ({language}) if possible, or English if you cannot.
-                    """
-                    
-                    full_prompt = f"{system_prompt}\n\nFarmer's Question: {message}\n\nAnswer:"
-                    
-                    response = model.generate_content(full_prompt)
-                    return response.text
-                except Exception as api_error:
-                    logger.error(f"Gemini API Error: {api_error}")
-                    # Fallback to rule-based if API fails
-            
-            # Fallback rule-based responses
-            message_lower = message.lower()
-            
-            if any(keyword in message_lower for keyword in ["weather", "rain", "temperature"]):
-                return self._get_weather_response(language)
-            elif any(keyword in message_lower for keyword in ["price", "market", "sell", "buy"]):
-                return self._get_market_response(language)
-            elif any(keyword in message_lower for keyword in ["disease", "pest", "infection", "sick"]):
-                return self._get_disease_response(language)
-            elif any(keyword in message_lower for keyword in ["scheme", "subsidy", "government", "loan"]):
-                return self._get_scheme_response(language)
-            else:
-                return self._get_general_response(language)
-                
+    async def get_response(self, message: str, language: str = "english") -> str:
+        """Generate chatbot response using Groq LLM"""
+        if not message or not message.strip():
+            return self._get_general_response(language)
+
+        try:
+            system_prompt = (
+                "You are Krishi Saathi, an intelligent agricultural assistant for Indian farmers. "
+                "Provide accurate, helpful, and practical advice on farming, crops, weather, "
+                "government schemes, and market prices.\n\n"
+                f"Context:\n"
+                f"- User Language: {language}\n"
+                "- Role: Agricultural Expert & Assistant\n"
+                "- Tone: Friendly, respectful, encouraging, and authoritative on farming matters.\n\n"
+                "Instructions:\n"
+                "1. Answer the farmer's question simply and clearly.\n"
+                "2. If the user asks about live data (today's weather, exact market prices) that you "
+                "   don't have, politely explain and guide them to the relevant app section "
+                "   (Weather or Market Prices tab).\n"
+                "3. Do not invent false data.\n"
+                "4. Keep answers concise (under 150 words) unless detailed explanation is requested.\n"
+                f"5. Respond in {language} if possible, otherwise use English.\n"
+                "6. Use simple language that farmers can understand easily."
+            )
+
+            chat_completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=512,
+                temperature=0.7,
+            )
+
+            return chat_completion.choices[0].message.content.strip()
+
         except Exception as e:
-            logger.error(f"Error generating chatbot response: {e}")
-            return "I'm sorry, I encountered an error. Please try again."
-    
+            logger.error(f"Groq API Error: {e}")
+            # Fallback to rule-based responses if Groq fails
+            return self._rule_based_response(message, language)
+
+    def _rule_based_response(self, message: str, language: str) -> str:
+        """Fallback rule-based response if Groq API fails"""
+        message_lower = message.lower()
+        if any(k in message_lower for k in ["weather", "rain", "temperature"]):
+            return self._get_weather_response(language)
+        elif any(k in message_lower for k in ["price", "market", "sell", "buy"]):
+            return self._get_market_response(language)
+        elif any(k in message_lower for k in ["disease", "pest", "infection", "sick"]):
+            return self._get_disease_response(language)
+        elif any(k in message_lower for k in ["scheme", "subsidy", "government", "loan"]):
+            return self._get_scheme_response(language)
+        else:
+            return self._get_general_response(language)
+
     def _get_weather_response(self, language: str) -> str:
-        """Get weather-related response"""
         responses = {
-            "english": "I can help you with weather information! Check the Weather Forecast section for current conditions and 7-day predictions. For specific weather queries, I can provide crop-specific advice based on current conditions.",
+            "english": "I can help with weather information! Check the Weather Forecast section for current conditions and 7-day predictions. For crop-specific advice based on weather, just ask me!",
             "hindi": "मैं मौसम की जानकारी में आपकी मदद कर सकता हूं! वर्तमान स्थितियों और 7-दिन की भविष्यवाणियों के लिए मौसम पूर्वानुमान अनुभाग देखें।",
-            "malayalam": "കാലാവസ്ഥാ വിവരങ്ങളിൽ എനിക്ക് നിങ്ങളെ സഹായിക്കാം! നിലവിലെ അവസ്ഥകൾക്കും 7 ദിവസത്തെ പ്രവചനങ്ങൾക്കും കാലാവസ്ഥാ പ്രവചന വിഭാഗം പരിശോധിക്കുക।"
+            "malayalam": "കാലാവസ്ഥാ വിവരങ്ങളിൽ എനിക്ക് സഹായിക്കാം! ഏഴ് ദിവസത്തെ പ്രവചനങ്ങൾക്ക് കാലാവസ്ഥാ പ്രവചന വിഭാഗം പരിശോധിക്കുക."
         }
         return responses.get(language, responses["english"])
-    
+
     def _get_market_response(self, language: str) -> str:
-        """Get market-related response"""
         responses = {
-            "english": "I can provide current market prices for various crops! Visit the Market Prices section to see live rates from Kerala markets. I can also suggest the best time to sell based on price trends.",
-            "hindi": "मैं विभिन्न फसलों के लिए वर्तमान बाजार मूल्य प्रदान कर सकता हूं! केरल बाजारों से लाइव दरें देखने के लिए बाजार मूल्य अनुभाग पर जाएं।",
-            "malayalam": "വിവിധ വിളകളുടെ നിലവിലെ മാർക്കറ്റ് വിലകൾ എനിക്ക് നൽകാൻ കഴിയും! കേരള മാർക്കറ്റുകളിൽ നിന്നുള്ള തത്സമയ നിരക്കുകൾ കാണാൻ മാർക്കറ്റ് വിലകൾ വിഭാഗം സന്ദർശിക്കുക।"
+            "english": "Check the Market Prices section for live rates from Kerala markets. I can also suggest the best time to sell based on general price trends!",
+            "hindi": "केरल बाजारों से लाइव दरें देखने के लिए बाजार मूल्य अनुभाग पर जाएं। मैं सामान्य मूल्य रुझानों के आधार पर बेचने का सबसे अच्छा समय भी सुझा सकता हूं!",
+            "malayalam": "കേരള മാർക്കറ്റുകളിൽ നിന്നുള്ള തത്സമയ നിരക്കുകൾ കാണാൻ മാർക്കറ്റ് വിലകൾ വിഭാഗം സന്ദർശിക്കുക."
         }
         return responses.get(language, responses["english"])
-    
+
     def _get_disease_response(self, language: str) -> str:
-        """Get disease-related response"""
         responses = {
-            "english": "I can help identify plant diseases and suggest treatments! Use the Disease Detection feature to upload plant photos for analysis, or describe the symptoms you're observing.",
-            "hindi": "मैं पौधों की बीमारियों की पहचान करने और उपचार सुझाने में मदद कर सकता हूं! विश्लेषण के लिए पौधों की तस्वीरें अपलोड करने के लिए रोग का पता लगाने की सुविधा का उपयोग करें।",
-            "malayalam": "സസ്യരോഗങ്ങൾ തിരിച്ചറിയാനും ചികിത്സകൾ നിർദ്ദേശിക്കാനും എനിക്ക് സഹായിക്കാനാകും! വിശകലനത്തിനായി സസ്യ ഫോട്ടോകൾ അപ്‌ലോഡ് ചെയ്യാൻ രോഗനിർണയ സവിശേഷത ഉപയോഗിക്കുക।"
+            "english": "Use the Disease Detection feature to upload plant photos for AI analysis, or describe the symptoms you're observing and I'll try to help identify the issue!",
+            "hindi": "पौधों की तस्वीरें अपलोड करने के लिए रोग का पता लगाने की सुविधा का उपयोग करें या लक्षणों का वर्णन करें।",
+            "malayalam": "സസ്യ ഫോട്ടോകൾ AI വിശകലനത്തിനായി അപ്‌ലോഡ് ചെയ്യാൻ രോഗനിർണയ സവിശേഷത ഉപയോഗിക്കുക."
         }
         return responses.get(language, responses["english"])
-    
+
     def _get_scheme_response(self, language: str) -> str:
-        """Get scheme-related response"""
         responses = {
-            "english": "I can guide you through various government agricultural schemes and subsidies! Check the Schemes section for available programs, eligibility criteria, and application processes.",
-            "hindi": "मैं विभिन्न सरकारी कृषि योजनाओं और सब्सिडी के माध्यम से आपका मार्गदर्शन कर सकता हूं! उपलब्ध कार्यक्रमों, पात्रता मानदंड और आवेदन प्रक्रियाओं के लिए योजना अनुभाग देखें।",
-            "malayalam": "വിവിധ സർക്കാർ കാർഷിക പദ്ധതികളിലൂടെയും സബ്‌സിഡികളിലൂടെയും എനിക്ക് നിങ്ങളെ വഴികാട്ടാൻ കഴിയും! ലഭ്യമായ പ്രോഗ്രാമുകൾ, യോഗ്യതാ മാനദണ്ഡങ്ങൾ, അപേക്ഷാ പ്രക്രിയകൾ എന്നിവയ്ക്കായി സ്കീമുകൾ വിഭാഗം പരിശോധിക്കുക।"
+            "english": "Check the Schemes section for available government programs, eligibility criteria, and application processes. I can explain specific schemes if you ask!",
+            "hindi": "उपलब्ध कार्यक्रमों और योजनाओं के लिए योजना अनुभाग देखें।",
+            "malayalam": "ലഭ്യമായ സർക്കാർ പദ്ധതികൾക്കായി സ്കീമുകൾ വിഭാഗം പരിശോധിക്കുക."
         }
         return responses.get(language, responses["english"])
-    
+
     def _get_general_response(self, language: str) -> str:
-        """Get general response"""
         responses = {
-            "english": "Hello! I'm your agricultural assistant. I can help you with weather forecasts, market prices, disease detection, government schemes, and general farming advice. What would you like to know?",
-            "hindi": "नमस्ते! मैं आपका कृषि सहायक हूं। मैं मौसम पूर्वानुमान, बाजार मूल्य, रोग का पता लगाने, सरकारी योजनाओं और सामान्य कृषि सलाह के साथ आपकी मदद कर सकता हूं।",
-            "malayalam": "ഹലോ! ഞാൻ നിങ്ങളുടെ കാർഷിക സഹായിയാണ്. കാലാവസ്ഥാ പ്രവചനങ്ങൾ, മാർക്കറ്റ് വിലകൾ, രോഗനിർണയം, സർക്കാർ പദ്ധതികൾ, പൊതു കൃഷി ഉപദേശം എന്നിവയിൽ എനിക്ക് നിങ്ങളെ സഹായിക്കാനാകും।"
+            "english": "Hello! I'm Krishi Saathi, your agricultural assistant. I can help with weather forecasts, market prices, disease detection, government schemes, and farming advice. What would you like to know?",
+            "hindi": "नमस्ते! मैं कृषि साथी हूं। मैं मौसम, बाजार मूल्य, रोग, सरकारी योजनाओं और कृषि सलाह में मदद कर सकता हूं। आप क्या जानना चाहते हैं?",
+            "malayalam": "ഹലോ! ഞാൻ കൃഷി സാഥി ആണ്. കാലാവസ്ഥ, മാർക്കറ്റ് വില, രോഗം, പദ്ധതികൾ, കൃഷി ഉപദേശം എന്നിവയിൽ സഹായിക്കാം."
         }
         return responses.get(language, responses["english"])
-    
+
     async def get_context(self) -> Dict[str, Any]:
         """Get chatbot context information"""
         try:
@@ -134,7 +131,4 @@ class ChatbotService:
             }
         except Exception as e:
             logger.error(f"Error getting chatbot context: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
