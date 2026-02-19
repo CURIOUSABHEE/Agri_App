@@ -15,8 +15,8 @@ class KeralaMarketService:
     """Service for Kerala vegetable market operations"""
     
     @staticmethod
-    def fetch_veg_price_for_date(date_str: str) -> List[Dict[str, Any]]:
-        """Fetch vegetable price data for a specific date from Kerala market API"""
+    async def fetch_veg_price_for_date(date_str: str) -> List[Dict[str, Any]]:
+        """Fetch vegetable price data for a specific date from Kerala market API (Async)"""
         api_url = f"https://vegetablemarketprice.com/api/dataapi/market/kerala/daywisedata?date={date_str}"
 
         headers = {
@@ -26,56 +26,64 @@ class KeralaMarketService:
         }
 
         try:
-            # Disable SSL verification for this self-signed certificate  
-            # Reduced timeout to 8 seconds for faster failure
-            response = requests.get(api_url, headers=headers, timeout=8, verify=False)
-            if response.status_code == 200:
-                json_data = response.json()
-                if json_data.get("data"):
-                    df_data = []
-                    
-                    # The API now returns data as a list of dictionaries, not arrays
-                    for item in json_data["data"]:
-                        if isinstance(item, dict):
-                            # Extract the required fields and add date
-                            vegetable_name = item.get("vegetablename", "")
+            import aiohttp
+            import ssl
+            
+            # Create SSL context that ignores verification (equivalent to verify=False)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            async with aiohttp.ClientSession(headers=headers, connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
+                async with session.get(api_url, timeout=15) as response:
+                    if response.status == 200:
+                        json_data = await response.json()
+                        print(f"DEBUG: Raw API for {date_str} - Keys: {list(json_data.keys())}")
+                        if json_data.get("data"):
+                            df_data = []
+                            raw_data_list = json_data["data"]
+                            print(f"DEBUG: Found {len(raw_data_list)} items for {date_str}")
                             
-                            # Skip items that don't have proper vegetable names
-                            if (not vegetable_name or 
-                                vegetable_name.lower() in ['vegetablename', 'price', 'retailprice', 'units'] or
-                                len(vegetable_name.strip()) < 2):
-                                continue
-                            
-                            row_dict = {
-                                "vegetablename": vegetable_name,
-                                "price": item.get("price", ""),
-                                "retailprice": item.get("retailprice", ""),
-                                "shopingmallprice": item.get("shopingmallprice", ""),
-                                "units": item.get("units", ""),
-                                "Date": date_str
-                            }
-                            df_data.append(row_dict)
-                        
-                    print(f"Processed {len(df_data)} rows of actual vegetable data")
-                    return df_data
-            else:
-                print(f"API Error: {response.status_code} - {response.text}")
-        except requests.exceptions.Timeout:
-            print(f"Timeout error fetching vegetable prices for {date_str}")
-        except requests.exceptions.RequestException as e:
-            print(f"Request error fetching vegetable prices for {date_str}: {e}")
+                            # The API now returns data as a list of dictionaries, not arrays
+                            for item in raw_data_list:
+                                if isinstance(item, dict):
+                                    # Extract the required fields and add date
+                                    vegetable_name = item.get("vegetablename", "")
+                                    
+                                    # Skip items that don't have proper vegetable names
+                                    if (not vegetable_name or 
+                                        vegetable_name.lower() in ['vegetablename', 'price', 'retailprice', 'units'] or
+                                        len(vegetable_name.strip()) < 2):
+                                        continue
+                                    
+                                    row_dict = {
+                                        "vegetablename": vegetable_name,
+                                        "price": item.get("price", ""),
+                                        "retailprice": item.get("retailprice", ""),
+                                        "shopingmallprice": item.get("shopingmallprice", ""),
+                                        "units": item.get("units", ""),
+                                        "Date": date_str
+                                    }
+                                    df_data.append(row_dict)
+                                
+                            print(f"Processed {len(df_data)} rows of actual vegetable data for {date_str}")
+                            return df_data
+                        else:
+                            print(f"DEBUG: No 'data' key in response for {date_str}")
+                    else:
+                        print(f"API Error for {date_str}: {response.status} - {await response.text()}")
         except Exception as e:
             print(f"Error fetching vegetable prices for {date_str}: {e}")
         
         return []
     
     @staticmethod
-    def get_market_data(
+    async def get_market_data(
         start_date: str, 
         end_date: Optional[str] = None, 
         crop_filter: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Get Kerala vegetable market data for date range"""
+        """Get Kerala vegetable market data for date range (Async)"""
         try:
             print(f"Kerala Market API called with start_date: {start_date}, end_date: {end_date}, crop_filter: {crop_filter}")
             
@@ -90,16 +98,25 @@ class KeralaMarketService:
             if date_diff > 30:
                 return create_error_response("Date range too large. Please select a maximum of 30 days.")
             
-            all_data = []
-            current_date = start
+            import asyncio
             
+            # Generate list of dates
+            dates_to_fetch = []
+            current_date = start
             while current_date <= end:
-                date_str = format_date_for_api(current_date)
-                print(f"Fetching data for date: {date_str}")
-                day_data = KeralaMarketService.fetch_veg_price_for_date(date_str)
-                print(f"Got {len(day_data)} items for date {date_str}")
-                all_data.extend(day_data)
+                dates_to_fetch.append(format_date_for_api(current_date))
                 current_date += timedelta(days=1)
+            
+            print(f"Fetching data for {len(dates_to_fetch)} days concurrently...")
+            
+            # Fetch all dates concurrently
+            tasks = [KeralaMarketService.fetch_veg_price_for_date(date_str) for date_str in dates_to_fetch]
+            results = await asyncio.gather(*tasks)
+            
+            # Combine results
+            all_data = []
+            for day_data in results:
+                all_data.extend(day_data)
             
             if not all_data:
                 return create_error_response("No data available for the selected date range")

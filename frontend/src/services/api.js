@@ -51,8 +51,12 @@ api.interceptors.response.use(
 
 // Simple dashboard service
 export const dashboardService = {
-  getDashboardData: async () => {
-    const response = await api.get("/dashboard");
+  getDashboardData: async (lat = null, lon = null) => {
+    let url = "/dashboard";
+    if (lat && lon) {
+      url += `?lat=${lat}&lon=${lon}`;
+    }
+    const response = await api.get(url);
     return response.data;
   },
 };

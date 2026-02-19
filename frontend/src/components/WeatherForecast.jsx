@@ -143,15 +143,15 @@ function WeatherForecast({ language }) {
           {language === "ml"
             ? "കാലാവസ്ഥ പ്രവചനം"
             : language === "hi"
-            ? "मौसम पूर्वानुमान"
-            : "Weather Forecast"}
+              ? "मौसम पूर्वानुमान"
+              : "Weather Forecast"}
         </h1>
         <p className="text-gray-600">
           {language === "ml"
             ? "നിങ്ങളുടെ പ്രദേശത്തെ കാലാവസ്ഥ വിവരങ്ങൾ കാണുക"
             : language === "hi"
-            ? "अपने क्षेत्र की मौसम जानकारी प्राप्त करें"
-            : "Get weather information for your area"}
+              ? "अपने क्षेत्र की मौसम जानकारी प्राप्त करें"
+              : "Get weather information for your area"}
         </p>
       </div>
 
@@ -162,19 +162,19 @@ function WeatherForecast({ language }) {
             {language === "ml"
               ? "സ്ഥലം തിരഞ്ഞെടുക്കുക"
               : language === "hi"
-              ? "स्थान चुनें"
-              : "Select Location"}
+                ? "स्थान चुनें"
+                : "Select Location"}
           </h2>
 
-          <div className="flex gap-4 items-end">
+          <div className="flex flex-col md:flex-row gap-4 md:items-end">
             {/* Quick City Selector */}
-            <div className="flex-1">
+            <div className="w-full md:flex-1">
               <Label htmlFor="citySelector">
                 {language === "ml"
                   ? "പ്രധാന നഗരങ്ങൾ"
                   : language === "hi"
-                  ? "मुख्य शहर"
-                  : "Quick Select"}
+                    ? "मुख्य शहर"
+                    : "Quick Select"}
               </Label>
               <select
                 id="citySelector"
@@ -190,8 +190,8 @@ function WeatherForecast({ language }) {
                   {language === "ml"
                     ? "നഗരം തിരഞ്ഞെടുക്കുക"
                     : language === "hi"
-                    ? "शहर चुनें"
-                    : "Select City"}
+                      ? "शहर चुनें"
+                      : "Select City"}
                 </option>
                 {getWeatherCityOptions(language).map((city) => (
                   <option key={city.value} value={city.value}>
@@ -202,13 +202,13 @@ function WeatherForecast({ language }) {
             </div>
 
             {/* Custom City Input */}
-            <div className="flex-1">
+            <div className="w-full md:flex-1">
               <Label htmlFor="city">
                 {language === "ml"
                   ? "അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യുക"
                   : language === "hi"
-                  ? "या टाइप करें"
-                  : "Or Type City"}
+                    ? "या टाइप करें"
+                    : "Or Type City"}
               </Label>
               <Input
                 type="text"
@@ -219,37 +219,41 @@ function WeatherForecast({ language }) {
                   language === "ml"
                     ? "നഗരത്തിന്റെ പേര്"
                     : language === "hi"
-                    ? "शहर का नाम दर्ज करें"
-                    : "Enter city name"
+                      ? "शहर का नाम दर्ज करें"
+                      : "Enter city name"
                 }
                 onKeyPress={(e) => e.key === "Enter" && handleCitySearch()}
               />
             </div>
-            <Button onClick={handleCitySearch} disabled={loading}>
-              {loading
-                ? language === "ml"
-                  ? "തിരയുന്നു..."
+
+            <div className="flex gap-2 w-full md:w-auto">
+              <Button onClick={handleCitySearch} disabled={loading} className="flex-1 md:flex-none">
+                {loading
+                  ? language === "ml"
+                    ? "തിരയുന്നു..."
+                    : language === "hi"
+                      ? "खोजा जा रहा है..."
+                      : "Searching..."
+                  : language === "ml"
+                    ? "തിരയുക"
+                    : language === "hi"
+                      ? "खोजें"
+                      : "Search"}
+              </Button>
+              <Button
+                onClick={getCurrentLocationWeather}
+                variant="outline"
+                disabled={loading}
+                className="flex-1 md:flex-none"
+              >
+                📍{" "}
+                {language === "ml"
+                  ? "നിലവിലെ സ്ഥലം"
                   : language === "hi"
-                  ? "खोजा जा रहा है..."
-                  : "Searching..."
-                : language === "ml"
-                ? "തിരയുക"
-                : language === "hi"
-                ? "खोजें"
-                : "Search"}
-            </Button>
-            <Button
-              onClick={getCurrentLocationWeather}
-              variant="outline"
-              disabled={loading}
-            >
-              📍{" "}
-              {language === "ml"
-                ? "നിലവിലെ സ്ഥലം"
-                : language === "hi"
-                ? "वर्तमान स्थान"
-                : "Current Location"}
-            </Button>
+                    ? "वर्तमान स्थान"
+                    : "Current Loc"}
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -409,24 +413,26 @@ function WeatherForecast({ language }) {
                 : "5-Day Forecast"}
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
               {forecast.map((day, index) => (
                 <div
                   key={index}
-                  className="bg-gray-50 p-4 rounded-lg text-center hover:bg-gray-100 transition-colors"
+                  className="bg-gray-50 p-3 md:p-4 rounded-lg text-center hover:bg-gray-100 transition-colors border border-gray-100 shadow-sm"
                 >
                   <div className="mb-2">
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm md:text-base">
                       {index === 0
-                        ? language === "malayalam"
+                        ? language === "ml"
                           ? "ഇന്ന്"
-                          : "Today"
+                          : language === "hi"
+                            ? "आज"
+                            : "Today"
                         : day.day_name}
                     </p>
-                    <p className="text-xs text-gray-600">{day.date}</p>
+                    <p className="text-xs text-gray-500">{day.date}</p>
                   </div>
 
-                  <div className="mb-3">
+                  <div className="mb-2 ">
                     <img
                       src={
                         day?.weather?.icon
@@ -434,37 +440,31 @@ function WeatherForecast({ language }) {
                           : "https://openweathermap.org/img/wn/01d@2x.png"
                       }
                       alt={day?.weather?.description || ""}
-                      className="w-12 h-12 mx-auto"
+                      className="w-10 h-10 md:w-12 md:h-12 mx-auto"
                     />
-                    <p className="text-xs text-gray-600 capitalize">
+                    <p className="text-xs text-gray-600 capitalize truncate px-1">
                       {day?.weather?.description || ""}
                     </p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="font-semibold">
+                    <p className="font-bold text-sm md:text-base">
                       <span className="text-red-500">
-                        {day.temperature.max}°
+                        {Math.round(day.temperature.max)}°
                       </span>
-                      <span className="text-gray-400 mx-1">/</span>
+                      <span className="text-gray-300 mx-1">/</span>
                       <span className="text-blue-500">
-                        {day.temperature.min}°
+                        {Math.round(day.temperature.min)}°
                       </span>
                     </p>
 
-                    <div className="flex items-center justify-center space-x-2 text-xs text-gray-600">
+                    <div className="flex items-center justify-center space-x-1 text-xs text-gray-500">
                       <span>💧 {day.humidity}%</span>
                     </div>
 
-                    <div className="flex items-center justify-center space-x-2 text-xs text-gray-600">
-                      <span>💨 {day.wind_speed} km/h</span>
+                    <div className="hidden md:flex items-center justify-center space-x-1 text-xs text-gray-500">
+                      <span>💨 {Math.round(day.wind_speed)} km/h</span>
                     </div>
-
-                    {day.precipitation > 0 && (
-                      <div className="flex items-center justify-center space-x-2 text-xs text-blue-600">
-                        <span>🌧️ {day.precipitation}mm</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}

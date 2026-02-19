@@ -4,7 +4,10 @@ Handles local Kerala soil data from CSV file as fallback for data.gov.in API
 """
 
 import os
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
@@ -23,8 +26,11 @@ class CSVSoilDataService:
         if not os.path.exists(self.csv_file_path):
             logger.warning(f"Kerala soil CSV file not found at: {self.csv_file_path}")
     
-    def _load_csv_data(self) -> pd.DataFrame:
+    def _load_csv_data(self) -> Any:
         """Load and cache CSV data"""
+        if pd is None:
+            logger.warning("Pandas not installed, cannot load CSV data")
+            return None
         try:
             if self.data_cache is None or self.last_loaded is None:
                 logger.info(f"Loading Kerala soil data from CSV: {self.csv_file_path}")
@@ -79,10 +85,10 @@ class CSVSoilDataService:
         try:
             df = self._load_csv_data()
             
-            if df.empty:
+            if df is None or df.empty:
                 return {
                     "success": False,
-                    "error": "CSV file not found or empty",
+                    "error": "CSV file not found, empty, or pandas missing",
                     "data": []
                 }
             
@@ -137,7 +143,7 @@ class CSVSoilDataService:
         """Get list of available districts in the CSV"""
         try:
             df = self._load_csv_data()
-            if not df.empty:
+            if df is not None and not df.empty:
                 districts = df['districtname'].unique().tolist()
                 return sorted(districts)
             return []
@@ -149,7 +155,7 @@ class CSVSoilDataService:
         """Get the date range of data available"""
         try:
             df = self._load_csv_data()
-            if not df.empty:
+            if df is not None and not df.empty:
                 dates = pd.to_datetime(df['date'])
                 return {
                     "start_date": dates.min().strftime("%Y-%m-%d"),
@@ -165,7 +171,7 @@ class CSVSoilDataService:
         """Get summary statistics for a specific district"""
         try:
             df = self._load_csv_data()
-            if df.empty:
+            if df is None or df.empty:
                 return {"error": "No data available"}
             
             # Filter by district

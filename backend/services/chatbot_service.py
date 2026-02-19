@@ -19,7 +19,48 @@ class ChatbotService:
     async def get_response(self, message: str, language: str = "english") -> str:
         """Generate chatbot response based on user message"""
         try:
-            # Simple rule-based responses (can be enhanced with AI later)
+            # Check for empty message
+            if not message or not message.strip():
+                return self._get_general_response(language)
+
+            # Try to use Gemini API first
+            import google.generativeai as genai
+            import os
+            
+            api_key = os.getenv("GEMINI_API_KEY")
+            if api_key:
+                try:
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel('gemini-pro')
+                    
+                    # Create context-aware prompt
+                    system_prompt = f"""
+                    You are Krishi Saathi, an intelligent agricultural assistant helper for farmers in India. 
+                    Your goal is to provide accurate, helpful, and practical advice on farming, crops, weather, government schemes, and market prices.
+                    
+                    Context:
+                    - User Language: {language}
+                    - Role: Agricultural Expert & Assistant
+                    - Tone: Friendly, Respectful, encouraging, and authoritative on farming matters.
+                    
+                    Instructions:
+                    1. Answer the farmer's question simply and clearly.
+                    2. If the user asks about specific live data (like today's weather or exact market prices) that you don't have access to, 
+                       politely explain that you can provide general advice and guide them to the specific section of the app (Weather or Market Prices tab) for real-time data.
+                    3. Do not invent false data.
+                    4. Keep answers concise (under 150 words) unless detailed explanation is requested.
+                    5. Respond in the requested language ({language}) if possible, or English if you cannot.
+                    """
+                    
+                    full_prompt = f"{system_prompt}\n\nFarmer's Question: {message}\n\nAnswer:"
+                    
+                    response = model.generate_content(full_prompt)
+                    return response.text
+                except Exception as api_error:
+                    logger.error(f"Gemini API Error: {api_error}")
+                    # Fallback to rule-based if API fails
+            
+            # Fallback rule-based responses
             message_lower = message.lower()
             
             if any(keyword in message_lower for keyword in ["weather", "rain", "temperature"]):

@@ -39,8 +39,8 @@ const Sidebar = ({
         language === "ml"
           ? "ഡാഷ്ബോർഡ്"
           : language === "hi"
-          ? "डैशबोर्ड"
-          : "Dashboard",
+            ? "डैशबोर्ड"
+            : "Dashboard",
       icon: "🏠",
     },
     {
@@ -49,8 +49,8 @@ const Sidebar = ({
         language === "ml"
           ? "വിള പ്രവചനം"
           : language === "hi"
-          ? "फसल भविष्यवाणी"
-          : "Crop Prediction",
+            ? "फसल भविष्यवाणी"
+            : "Crop Prediction",
       icon: "🌱",
     },
     {
@@ -59,8 +59,8 @@ const Sidebar = ({
         language === "ml"
           ? "കാലാവസ്ഥ പ്രവചനം"
           : language === "hi"
-          ? "मौसम पूर्वानुमान"
-          : "Weather Forecast",
+            ? "मौसम पूर्वानुमान"
+            : "Weather Forecast",
       icon: "🌤️",
     },
     {
@@ -69,8 +69,8 @@ const Sidebar = ({
         language === "ml"
           ? "വിപണി വിലകൾ"
           : language === "hi"
-          ? "बाजार भाव"
-          : "Market Prices",
+            ? "बाजार भाव"
+            : "Market Prices",
       icon: "📊",
     },
     {
@@ -79,8 +79,8 @@ const Sidebar = ({
         language === "ml"
           ? "രോഗ നിർണയം"
           : language === "hi"
-          ? "रोग डिटेक्टर"
-          : "Disease Detector",
+            ? "रोग डिटेक्टर"
+            : "Disease Detector",
       icon: "🔬",
     },
     {
@@ -89,8 +89,8 @@ const Sidebar = ({
         language === "ml"
           ? "ഇൻവെന്ററി മാനേജ്മെന്റ്"
           : language === "hi"
-          ? "इन्वेंट्री प्रबंधन"
-          : "Inventory Management",
+            ? "इन्वेंट्री प्रबंधन"
+            : "Inventory Management",
       icon: "📦",
     },
     {
@@ -99,8 +99,8 @@ const Sidebar = ({
         language === "ml"
           ? "പദ്ധതികൾ"
           : language === "hi"
-          ? "योजनाएं"
-          : "Schemes",
+            ? "योजनाएं"
+            : "Schemes",
       icon: "📈",
     },
     {
@@ -109,17 +109,16 @@ const Sidebar = ({
         language === "ml"
           ? "ക്രമീകരണങ്ങൾ"
           : language === "hi"
-          ? "सेटिंग्स"
-          : "Settings",
+            ? "सेटिंग्स"
+            : "Settings",
       icon: "⚙️",
     },
   ];
 
   return (
     <div
-      className={`${
-        isCollapsed ? "w-16" : "w-64"
-      } bg-green-800 text-white min-h-screen shadow-lg transition-all duration-300`}
+      className={`h-full bg-green-800 text-white shadow-lg transition-all duration-300 flex flex-col ${isCollapsed ? "w-16" : "w-64"
+        }`}
     >
       {!isCollapsed && (
         <div className="p-6 border-b border-green-700">
@@ -128,15 +127,15 @@ const Sidebar = ({
             {language === "ml"
               ? "അഗ്രിഡാഷ്"
               : language === "hi"
-              ? "एग्रीडैश"
-              : "AgriDash"}
+                ? "एग्रीडैश"
+                : "AgriDash"}
           </h2>
           <p className="text-sm text-green-200">
             {language === "ml"
               ? "കർഷക പോർട്ടൽ"
               : language === "hi"
-              ? "किसान पोर्टल"
-              : "Farmer Portal"}
+                ? "किसान पोर्टल"
+                : "Farmer Portal"}
           </p>
 
           <button
@@ -151,8 +150,8 @@ const Sidebar = ({
                   {language === "ml"
                     ? "എടുക്കുന്നു..."
                     : language === "hi"
-                    ? "लाया जा रहा है..."
-                    : "Fetching..."}
+                      ? "लाया जा रहा है..."
+                      : "Fetching..."}
                 </span>
               </>
             ) : (
@@ -162,8 +161,8 @@ const Sidebar = ({
                   {language === "ml"
                     ? "ലൊക്കേഷൻ എടുക്കുക"
                     : language === "hi"
-                    ? "स्थान प्राप्त करें"
-                    : "Fetch Location"}
+                      ? "स्थान प्राप्त करें"
+                      : "Fetch Location"}
                 </span>
               </>
             )}
@@ -176,8 +175,8 @@ const Sidebar = ({
                   {language === "ml"
                     ? "ലൊക്കേഷൻ എടുക്കാൻ കഴിഞ്ഞില്ല"
                     : language === "hi"
-                    ? "स्थान प्राप्त नहीं कर सका"
-                    : location.error}
+                      ? "स्थान प्राप्त नहीं कर सका"
+                      : location.error}
                 </p>
               ) : (
                 <div>
@@ -185,16 +184,16 @@ const Sidebar = ({
                     {language === "ml"
                       ? "അക്ഷാംശം"
                       : language === "hi"
-                      ? "अक्षांश"
-                      : "Lat"}
+                        ? "अक्षांश"
+                        : "Lat"}
                     : {location.latitude?.toFixed(4)}
                   </p>
                   <p>
                     {language === "ml"
                       ? "രേഖാംശം"
                       : language === "hi"
-                      ? "देशांतर"
-                      : "Lng"}
+                        ? "देशांतर"
+                        : "Lng"}
                     : {location.longitude?.toFixed(4)}
                   </p>
                 </div>
@@ -209,13 +208,11 @@ const Sidebar = ({
           <button
             key={item.id}
             onClick={() => setActiveItem(item.id)}
-            className={`w-full text-left hover:bg-green-700 transition-colors duration-200 flex items-center ${
-              isCollapsed ? "px-4 py-4 justify-center" : "px-6 py-3 space-x-3"
-            } ${
-              activeItem === item.id
+            className={`w-full text-left hover:bg-green-700 transition-colors duration-200 flex items-center ${isCollapsed ? "px-4 py-4 justify-center" : "px-6 py-3 space-x-3"
+              } ${activeItem === item.id
                 ? "bg-green-700 border-r-4 border-green-300"
                 : ""
-            }`}
+              }`}
             title={isCollapsed ? item.name : ""}
           >
             <span className="text-lg">{item.icon}</span>

@@ -135,6 +135,22 @@ class DiseaseDetectionService:
                     analysis_result["detected_diseases"] = [likely_disease]
                     analysis_result["recommendations"] = self._generate_recommendations(likely_disease)
                     analysis_result["severity"] = likely_disease["severity"]
+                    
+                    # Add flattened fields for frontend compatibility
+                    analysis_result["disease"] = likely_disease["name"]
+                    analysis_result["crop"] = crop_type # Added for frontend compatibility
+                    
+                    # Format treatment text
+                    treatment_items = []
+                    if "treatment" in likely_disease:
+                        t = likely_disease["treatment"]
+                        if "chemical" in t: treatment_items.extend(t["chemical"])
+                        if "organic" in t: treatment_items.extend(t["organic"])
+                        if "cultural" in t: treatment_items.extend(t["cultural"])
+                    analysis_result["treatment"] = ". ".join(treatment_items) + "."
+                    
+                    # Format prevention text
+                    analysis_result["prevention"] = ". ".join(likely_disease.get("prevention", [])) + "."
             else:
                 # Generic response for unknown crops
                 analysis_result["detected_diseases"] = [{
@@ -153,6 +169,12 @@ class DiseaseDetectionService:
                     "Collect sample for laboratory analysis",
                     "Monitor plant closely for symptom progression"
                 ]
+                
+                # Add flattened fields for frontend compatibility
+                analysis_result["disease"] = "Possible Fungal Infection"
+                analysis_result["treatment"] = "Remove affected parts. Improve air circulation. Apply fungicide if necessary."
+                analysis_result["prevention"] = "Consult local agricultural expert. Monitor plant closely."
+                analysis_result["crop"] = "Unknown"
             
             # Store analysis in history
             self.analysis_history.append(analysis_result)

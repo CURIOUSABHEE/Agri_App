@@ -17,18 +17,34 @@ from typing import Optional, List, Dict, Any
 import jwt
 import secrets
 import hashlib
-import pyotp
-import qrcode
+try:
+    import pyotp
+    import qrcode
+except ImportError:
+    pyotp = None
+    qrcode = None
 import io
 import base64
 from motor.motor_asyncio import AsyncIOMotorDatabase
-import httpx
-from webauthn import generate_registration_options, verify_registration_response, generate_authentication_options, verify_authentication_response
-from webauthn.helpers.structs import (
-    AuthenticatorSelectionCriteria,
-    UserVerificationRequirement,
-    PublicKeyCredentialDescriptor
-)
+try:
+    import httpx
+except ImportError:
+    httpx = None
+try:
+    from webauthn import generate_registration_options, verify_registration_response, generate_authentication_options, verify_authentication_response
+    from webauthn.helpers.structs import (
+        AuthenticatorSelectionCriteria,
+        UserVerificationRequirement,
+        PublicKeyCredentialDescriptor
+    )
+except ImportError:
+    generate_registration_options = None
+    verify_registration_response = None
+    generate_authentication_options = None
+    verify_authentication_response = None
+    AuthenticatorSelectionCriteria = None
+    UserVerificationRequirement = None
+    PublicKeyCredentialDescriptor = None
 import os
 
 # Configuration

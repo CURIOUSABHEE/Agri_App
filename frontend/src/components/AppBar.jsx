@@ -112,8 +112,8 @@ const AppBar = ({
       (language === "ml"
         ? "അഗ്രിഡാഷ്"
         : language === "hi"
-        ? "एग्रीडैश"
-        : "AgriDash")
+          ? "एग्रीडैश"
+          : "AgriDash")
     );
   };
 
@@ -138,7 +138,7 @@ const AppBar = ({
     <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         {/* Left side - Toggle button and Page title */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 md:space-x-3">
           <button
             onClick={toggleSidebar}
             className="p-2 hover:bg-gray-100 rounded-md transition-colors duration-200"
@@ -146,68 +146,60 @@ const AppBar = ({
           >
             <span className="text-xl">☰</span>
           </button>
-          <span className="text-2xl">{getPageIcon(activeItem)}</span>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-800">
+          <span className="text-2xl hidden md:block">{getPageIcon(activeItem)}</span>
+          <div className="flex flex-col">
+            <h1 className="text-lg md:text-xl font-semibold text-gray-800">
               {getPageTitle(activeItem)}
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs md:text-sm text-gray-500 hidden md:block">
               {language === "ml"
                 ? `നിങ്ങളുടെ ${getPageTitle(activeItem)} കൈകാര്യം ചെയ്യുക`
                 : language === "hi"
-                ? `अपने ${getPageTitle(activeItem)} का प्रबंधन करें`
-                : `Manage your ${getPageTitle(activeItem).toLowerCase()}`}
+                  ? `अपने ${getPageTitle(activeItem)} का प्रबंधन करें`
+                  : `Manage your ${getPageTitle(activeItem).toLowerCase()}`}
             </p>
           </div>
         </div>
 
         {/* Right side - User info and actions */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 md:space-x-4">
           {/* Language Toggle */}
           <button
             onClick={toggleLanguage}
-            className="flex items-center space-x-2 px-3 py-2 bg-blue-100 hover:bg-blue-200 rounded-md transition-colors duration-200"
+            className="flex items-center space-x-2 px-2 py-1 md:px-3 md:py-2 bg-blue-100 hover:bg-blue-200 rounded-md transition-colors duration-200"
             title={
               language === "en"
                 ? "Switch to Hindi"
                 : language === "hi"
-                ? "Switch to Malayalam"
-                : "Switch to English"
+                  ? "Switch to Malayalam"
+                  : "Switch to English"
             }
           >
-            <span className="text-sm font-medium">
+            <span className="text-xs md:text-sm font-medium">
               {language === "en"
                 ? "🇮🇳 हिंदी"
                 : language === "hi"
-                ? "🇮🇳 മലയാളം"
-                : "🇬🇧 English"}
+                  ? "🇮🇳 മലയാളം"
+                  : "🇬🇧 English"}
             </span>
           </button>
 
-          <div className="flex items-center space-x-2">
-            <div className="text-2xl">🔔</div>
-            <span className="text-sm text-gray-600">
-              {language === "ml"
-                ? "അറിയിപ്പുകൾ"
-                : language === "hi"
-                ? "सूचनाएं"
-                : "Notifications"}
-            </span>
+          <div className="flex items-center space-x-2 hidden md:flex">
+            <div className="text-xl md:text-2xl">🔔</div>
           </div>
 
           {/* User Profile Section */}
-          <div className="border-l border-gray-300 pl-4">
-            <div className="flex items-center space-x-3">
+          <div className="border-l border-gray-300 pl-2 md:pl-4">
+            <div className="flex items-center space-x-2 md:space-x-3">
               {/* User Avatar and Info */}
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
                   {getFarmerInitials()}
                 </div>
-                <div className="text-sm">
+                <div className="text-sm hidden md:block">
                   <p className="font-medium text-gray-800">
                     {getFarmerDisplayName()}
                   </p>
-                  <p className="text-gray-500">{getFarmerLocation()}</p>
                 </div>
               </div>
 
@@ -215,22 +207,16 @@ const AppBar = ({
               {onLogout && (
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 rounded-md transition-colors duration-200 border border-red-200"
-                  title={
-                    language === "ml"
-                      ? "ലോഗ് ഔട്ട് ചെയ്യുക"
-                      : language === "hi"
-                      ? "लॉग आउट करें"
-                      : "Logout"
-                  }
+                  className="flex items-center justify-center w-8 h-8 md:w-auto md:h-auto md:space-x-1 md:px-3 md:py-2 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 rounded-md transition-colors duration-200 border border-red-200"
+                  title="Logout"
                 >
                   <span className="text-sm">🚪</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium hidden md:block">
                     {language === "ml"
                       ? "ലോഗ് ഔട്ട്"
                       : language === "hi"
-                      ? "लॉग आउट"
-                      : "Logout"}
+                        ? "लॉग आउट"
+                        : "Logout"}
                   </span>
                 </button>
               )}
@@ -249,15 +235,15 @@ const AppBar = ({
                 {language === "ml"
                   ? "ലോഗ് ഔട്ട് ചെയ്യുക?"
                   : language === "hi"
-                  ? "लॉग आउट करें?"
-                  : "Logout?"}
+                    ? "लॉग आउट करें?"
+                    : "Logout?"}
               </h3>
               <p className="text-gray-600 mb-6">
                 {language === "ml"
                   ? "നിങ്ങൾ ലോഗ് ഔട്ട് ചെയ്യാൻ ആഗ്രഹിക്കുന്നുണ്ടോ? നിങ്ങൾക്ക് വീണ്ടും ലോഗിൻ ചെയ്യേണ്ടതുണ്ട്."
                   : language === "hi"
-                  ? "क्या आप लॉग आउट करना चाहते हैं? आपको फिर से लॉगिन करना होगा।"
-                  : "Are you sure you want to logout? You'll need to login again to access the app."}
+                    ? "क्या आप लॉग आउट करना चाहते हैं? आपको फिर से लॉगिन करना होगा।"
+                    : "Are you sure you want to logout? You'll need to login again to access the app."}
               </p>
               <div className="flex space-x-3">
                 <button
@@ -267,8 +253,8 @@ const AppBar = ({
                   {language === "ml"
                     ? "റദ്ദാക്കുക"
                     : language === "hi"
-                    ? "रद्द करें"
-                    : "Cancel"}
+                      ? "रद्द करें"
+                      : "Cancel"}
                 </button>
                 <button
                   onClick={confirmLogout}
@@ -277,8 +263,8 @@ const AppBar = ({
                   {language === "ml"
                     ? "ലോഗ് ഔട്ട്"
                     : language === "hi"
-                    ? "लॉग आउट"
-                    : "Logout"}
+                      ? "लॉग आउट"
+                      : "Logout"}
                 </button>
               </div>
             </div>

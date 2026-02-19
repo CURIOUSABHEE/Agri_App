@@ -13,8 +13,23 @@ import FloatingChatbot from "./FloatingChatbot";
 
 const Layout = ({ farmerData, onLogout }) => {
   const [activeItem, setActiveItem] = useState("dashboard");
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Initialize collapsed state based on screen width
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth < 768);
   const [language, setLanguage] = useState("en");
+
+  // Update effect to handle resize
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsSidebarCollapsed(true);
+      } else {
+        setIsSidebarCollapsed(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const toggleLanguage = () => {
     setLanguage((prev) => {
@@ -51,15 +66,15 @@ const Layout = ({ farmerData, onLogout }) => {
                 {language === "ml"
                   ? "ഉടൻ വരുന്നു"
                   : language === "hi"
-                  ? "जल्द आ रहा है"
-                  : "Coming Soon"}
+                    ? "जल्द आ रहा है"
+                    : "Coming Soon"}
               </h2>
               <p className="text-gray-600">
                 {language === "ml"
                   ? "ഈ ഫീച്ചർ വികസിപ്പിച്ചുകൊണ്ടിരിക്കുന്നു, ഉടൻ ലഭ്യമാകും."
                   : language === "hi"
-                  ? "यह सुविधा विकसित की जा रही है और जल्द ही उपलब्ध होगी।"
-                  : "This feature is under development and will be available soon."}
+                    ? "यह सुविधा विकसित की जा रही है और जल्द ही उपलब्ध होगी।"
+                    : "This feature is under development and will be available soon."}
               </p>
             </div>
           </div>
@@ -68,14 +83,37 @@ const Layout = ({ farmerData, onLogout }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar
-        activeItem={activeItem}
-        setActiveItem={setActiveItem}
-        isCollapsed={isSidebarCollapsed}
-        language={language}
-      />
-      <div className="flex-1 flex flex-col">
+    <div className="flex h-screen bg-gray-100 overflow-hidden relative">
+      {/* Mobile Backdrop */}
+      {!isSidebarCollapsed && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 md:hidden"
+          onClick={() => setIsSidebarCollapsed(true)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div
+        className={`fixed md:relative z-30 h-full transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarCollapsed ? "-translate-x-full md:translate-x-0 md:w-16" : "translate-x-0 w-64"
+          }`}
+      >
+        <Sidebar
+          activeItem={activeItem}
+          setActiveItem={(item) => {
+            setActiveItem(item);
+            // Close sidebar on mobile when item selected
+            if (window.innerWidth < 768) {
+              setIsSidebarCollapsed(true);
+            }
+          }}
+          isCollapsed={isSidebarCollapsed}
+          isMobileOpen={!isSidebarCollapsed}
+          language={language}
+        />
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col w-full h-full overflow-hidden">
         <AppBar
           activeItem={activeItem}
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -84,7 +122,9 @@ const Layout = ({ farmerData, onLogout }) => {
           farmerData={farmerData}
           onLogout={onLogout}
         />
-        <div className="flex-1 overflow-y-auto">{renderContent()}</div>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 w-full">
+          {renderContent()}
+        </div>
       </div>
 
       {/* Floating Chatbot - available on all pages */}

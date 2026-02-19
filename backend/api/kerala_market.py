@@ -14,7 +14,7 @@ async def get_kerala_market_data(
     crop_filter: Optional[str] = None
 ):
     """Get Kerala vegetable market data for date range"""
-    result = KeralaMarketService.get_market_data(start_date, end_date, crop_filter)
+    result = await KeralaMarketService.get_market_data(start_date, end_date, crop_filter)
     
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))

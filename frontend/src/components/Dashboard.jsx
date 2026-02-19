@@ -23,11 +23,32 @@ const Dashboard = ({ language = "en" }) => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+
+        // Get location if available
+        let lat = null;
+        let lon = null;
+
+        try {
+          if (navigator.geolocation) {
+            const position = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                timeout: 5000
+              });
+            });
+            lat = position.coords.latitude;
+            lon = position.coords.longitude;
+            console.log("📍 User location:", lat, lon);
+          }
+        } catch (locError) {
+          console.log("⚠️ Location access denied or failed:", locError.message);
+        }
+
         console.log(
           "Fetching dashboard data from:",
-          "http://localhost:8000/api/dashboard"
+          `http://localhost:8000/api/dashboard${lat && lon ? `?lat=${lat}&lon=${lon}` : ''}`
         );
-        const response = await dashboardService.getDashboardData();
+
+        const response = await dashboardService.getDashboardData(lat, lon);
         console.log("Dashboard API response:", response);
 
         if (response.success) {
@@ -69,8 +90,8 @@ const Dashboard = ({ language = "en" }) => {
           {language === "ml"
             ? "ഡാഷ്ബോർഡ് ലോഡ് ചെയ്യുന്നു..."
             : language === "hi"
-            ? "डैशबोर्ड लोड हो रहा है..."
-            : "Loading dashboard..."}
+              ? "डैशबोर्ड लोड हो रहा है..."
+              : "Loading dashboard..."}
         </div>
       </div>
     );
@@ -83,8 +104,8 @@ const Dashboard = ({ language = "en" }) => {
           {language === "ml"
             ? "ഡാഷ്ബോർഡ് ഡാറ്റ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല"
             : language === "hi"
-            ? "डैशबोर्ड डेटा लोड नहीं कर सका"
-            : error}
+              ? "डैशबोर्ड डेटा लोड नहीं कर सका"
+              : error}
         </div>
       </div>
     );
@@ -97,8 +118,8 @@ const Dashboard = ({ language = "en" }) => {
           {language === "ml"
             ? `സ്വാഗതം, ${farmerData?.name || "കർഷകൻ"}! 👋`
             : language === "hi"
-            ? `स्वागत है, ${farmerData?.name || "किसान"}! 👋`
-            : `Welcome, ${farmerData?.name || "Farmer"}! 👋`}
+              ? `स्वागत है, ${farmerData?.name || "किसान"}! 👋`
+              : `Welcome, ${farmerData?.name || "Farmer"}! 👋`}
         </h1>
         <p className="text-gray-600 mt-2">{farmerData?.location || ""}</p>
       </div>
@@ -111,8 +132,8 @@ const Dashboard = ({ language = "en" }) => {
                 {language === "ml"
                   ? "മൊത്തം ഫാമുകൾ"
                   : language === "hi"
-                  ? "कुल फार्म"
-                  : "Total Farms"}
+                    ? "कुल फार्म"
+                    : "Total Farms"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
                 {farmerData?.farm_count ?? "-"}
@@ -129,8 +150,8 @@ const Dashboard = ({ language = "en" }) => {
                 {language === "ml"
                   ? "മൊത്തം ഏരിയ"
                   : language === "hi"
-                  ? "कुल क्षेत्र"
-                  : "Total Area"}
+                    ? "कुल क्षेत्र"
+                    : "Total Area"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
                 {farmerData?.total_area ?? "-"}
@@ -147,8 +168,8 @@ const Dashboard = ({ language = "en" }) => {
                 {language === "ml"
                   ? "സജീവ സീസൺ"
                   : language === "hi"
-                  ? "सक्रिय मौसम"
-                  : "Active Season"}
+                    ? "सक्रिय मौसम"
+                    : "Active Season"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
                 {farmerData?.active_season ?? "-"}
@@ -165,8 +186,8 @@ const Dashboard = ({ language = "en" }) => {
                 {language === "ml"
                   ? "കാലാവസ്ഥ"
                   : language === "hi"
-                  ? "मौसम"
-                  : "Weather"}
+                    ? "मौसम"
+                    : "Weather"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
                 {farmerData?.weather?.temperature
@@ -189,8 +210,8 @@ const Dashboard = ({ language = "en" }) => {
                 {language === "ml"
                   ? "ബുക്ക്മാർക്ക് ചെയ്ത പദ്ധതികൾ"
                   : language === "hi"
-                  ? "बुकमार्क की गई योजनाएं"
-                  : "Bookmarked Schemes"}
+                    ? "बुकमार्क की गई योजनाएं"
+                    : "Bookmarked Schemes"}
               </h2>
               <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
                 {bookmarkedSchemes.length}{" "}
@@ -260,8 +281,8 @@ const Dashboard = ({ language = "en" }) => {
             {language === "ml"
               ? "ദ്രുത പ്രവർത്തനങ്ങൾ"
               : language === "hi"
-              ? "त्वरित कार्य"
-              : "Quick Actions"}
+                ? "त्वरित कार्य"
+                : "Quick Actions"}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button className="p-4 bg-green-100 hover:bg-green-200 rounded-lg transition-colors duration-200 text-left">
@@ -270,8 +291,8 @@ const Dashboard = ({ language = "en" }) => {
                 {language === "ml"
                   ? "വിളകൾ കാണുക"
                   : language === "hi"
-                  ? "फसलें देखें"
-                  : "View Crops"}
+                    ? "फसलें देखें"
+                    : "View Crops"}
               </h3>
               <p className="text-sm text-gray-600">&nbsp;</p>
             </button>
@@ -282,8 +303,8 @@ const Dashboard = ({ language = "en" }) => {
                 {language === "ml"
                   ? "വിശകലനം"
                   : language === "hi"
-                  ? "विश्लेषण"
-                  : "Analytics"}
+                    ? "विश्लेषण"
+                    : "Analytics"}
               </h3>
               <p className="text-sm text-gray-600">&nbsp;</p>
             </button>
@@ -294,8 +315,8 @@ const Dashboard = ({ language = "en" }) => {
                 {language === "ml"
                   ? "വിപണി വിലകൾ"
                   : language === "hi"
-                  ? "बाजार भाव"
-                  : "Market Prices"}
+                    ? "बाजार भाव"
+                    : "Market Prices"}
               </h3>
               <p className="text-sm text-gray-600">&nbsp;</p>
             </button>
